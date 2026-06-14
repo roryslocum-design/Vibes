@@ -2,11 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { randomUUID } = require('crypto');
 const Database = require('better-sqlite3');
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, "vibes.db");
+const defaultDbDir = process.env.DB_PATH ? path.dirname(process.env.DB_PATH) : (process.env.VERCEL ? os.tmpdir() : __dirname);
+const DB_PATH = process.env.DB_PATH || path.join(defaultDbDir, "vibes.db");
 const HTML_PATH = path.join(__dirname, "index.html");
 // --- Express Middleware ---
 // Enable CORS for all routes (you might want to restrict this in production)
@@ -34,7 +36,6 @@ CREATE TABLE IF NOT EXISTS users (
   password TEXT NOT NULL,
   display_name TEXT DEFAULT '',
   photo_data_url TEXT,
-  bio TEXT DEFAULT '',
   streaks_enabled INTEGER DEFAULT 0,
   hidden_scales TEXT DEFAULT '[]',
   created_at INTEGER NOT NULL
@@ -83,6 +84,20 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_notif_to ON notifications(to_user);
+
+CREATE TABLE IF NOT EXISTS presence (
+  username TEXT PRIMARY KEY,
+  status TEXT DEFAULT 'away',
+  last_seen INTEGER NOT NULL,
+  last_active INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS typing_indicators (
+  username TEXT NOT NULL,
+  peer TEXT NOT NULL,
+  typing_at INTEGER NOT NULL,
+  PRIMARY KEY (username, peer)
+);
 `);
 // --- Utility Functions ---
 
@@ -112,7 +127,6 @@ function userPublic(u) {
     username: u.username,
     displayName: u.display_name || "",
     photoDataUrl: u.photo_data_url || null,
-    bio: u.bio || "",
   };
 }
 
@@ -190,7 +204,6 @@ function loadMeState(username) {
     username: u.username,
     displayName: u.display_name || "",
     photoDataUrl: u.photo_data_url || null,
-    bio: u.bio || "",
     streaksEnabled: !!u.streaks_enabled,
     hiddenScales: JSON.parse(u.hidden_scales || "[]"),
     people,
@@ -280,10 +293,35 @@ app.get(['/relations', '/relations/', '/relations/index.html'], (req, res) => {
 
 // Manifest / icon stubs
 app.get('/vibes/manifest.json', (req, res) => {
-    res.json({ name: "Vibes", short_name: "Vibes", start_url: "/vibes/", display: "standalone", background_color: "#000", theme_color: "#000", icons: [] });
+    try {
+        const manifest = fs.readFileSync(path.join(__dirname, 'manifest.json'), 'utf8');
+        res.type('application/json; charset=utf-8').send(manifest);
+    } catch (error) {
+        res.json({ name: "Vibes", short_name: "Vibes", start_url: "/vibes/", display: "standalone", background_color: "#000", theme_color: "#000", icons: [] });
+    }
+});
+app.get('/manifest.json', (req, res) => {
+    try {
+        const manifest = fs.readFileSync(path.join(__dirname, 'manifest.json'), 'utf8');
+        res.type('application/json; charset=utf-8').send(manifest);
+    } catch (error) {
+        res.json({ name: "Vibes", short_name: "Vibes", start_url: "/", display: "standalone", background_color: "#000", theme_color: "#000", icons: [] });
+    }
 });
 app.get('/vibes/icon.svg', (req, res) => {
-    res.type('image/svg+xml').send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#0a84ff"/><text x="32" y="42" text-anchor="middle" font-size="34" fill="white" font-family="sans-serif">V</text></svg>`);
+    res.type('image/svg+xml').send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0a84ff"/><stop offset="100%" stop-color="#5e5ce6"/></linearGradient></defs><rect width="64" height="64" fill="url(#g)"/><text x="32" y="44" text-anchor="middle" font-size="40" font-weight="700" fill="#fff" font-family="system-ui, sans-serif">V</text></svg>`);
+});
+
+// Service Worker
+app.get('/sw.js', (req, res) => {
+    try {
+        const sw = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
+        res.type('application/javascript; charset=utf-8')
+           .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+           .send(sw);
+    } catch (error) {
+        res.status(404).send('Service Worker not found');
+    }
 });
 
 // Serve other static files (CSS, client-side JS, images, etc.) from the project root
@@ -371,7 +409,6 @@ app.patch("/vibes-api/me", (req, res) => {
     const params = [];
     if ("displayName" in body) { updates.push("display_name = ?"); params.push(String(body.displayName || "")); }
     if ("photoDataUrl" in body) { updates.push("photo_data_url = ?"); params.push(body.photoDataUrl || null); }
-    if ("bio" in body) { updates.push("bio = ?"); params.push(String(body.bio || "")); }
     if ("streaksEnabled" in body) { updates.push("streaks_enabled = ?"); params.push(body.streaksEnabled ? 1 : 0); }
     if ("hiddenScales" in body) { updates.push("hidden_scales = ?"); params.push(JSON.stringify(body.hiddenScales || [])); }
     if (updates.length) {
@@ -579,9 +616,90 @@ app.post("/vibes-api/messages/:peer", async (req, res) => {
     const connected = prepare("SELECT 1 FROM people WHERE owner = ? AND source_username = ?").get(me, peer);
     if (!connected) return res.status(403).json({ error: "Not connected" });
     prepare("INSERT INTO messages (from_user, to_user, body, ts, read) VALUES (?, ?, ?, ?, 0)").run(me, peer, String(body), now());
+    // Clear typing indicator when message is sent
+    prepare("DELETE FROM typing_indicators WHERE username = ? AND peer = ?").run(me, peer);
     res.json({ ok: true });
   } catch (e) {
     console.error(`Error in /vibes-api/messages/${req.params.peer} POST:`, e);
+    res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
+// PRESENCE & TYPING
+app.post("/vibes-api/presence/update", (req, res) => {
+  try {
+    const me = req.me;
+    const { status } = req.body; // 'online', 'away', or 'offline'
+    const validStatus = ['online', 'away', 'offline'].includes(status) ? status : 'away';
+    const ts = now();
+    const existing = prepare("SELECT 1 FROM presence WHERE username = ?").get(me);
+    if (existing) {
+      prepare("UPDATE presence SET status = ?, last_active = ? WHERE username = ?").run(validStatus, ts, me);
+    } else {
+      prepare("INSERT INTO presence (username, status, last_seen, last_active) VALUES (?, ?, ?, ?)").run(me, validStatus, ts, ts);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("Error in /vibes-api/presence/update:", e);
+    res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
+app.get("/vibes-api/presence/:username", (req, res) => {
+  try {
+    const username = decodeURIComponent(req.params.username);
+    const p = prepare("SELECT * FROM presence WHERE username = ?").get(username);
+    if (!p) {
+      return res.json({ status: 'away', lastSeen: 0, lastActive: 0 });
+    }
+    // If they haven't been active in 5 minutes, mark as away
+    const fiveMinutesAgo = now() - 300;
+    const effectiveStatus = p.last_active < fiveMinutesAgo ? 'away' : p.status;
+    res.json({ 
+      status: effectiveStatus, 
+      lastSeen: p.last_seen, 
+      lastActive: p.last_active,
+      isTyping: false
+    });
+  } catch (e) {
+    console.error(`Error in /vibes-api/presence/${req.params.username}:`, e);
+    res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
+app.post("/vibes-api/typing/:peer", (req, res) => {
+  try {
+    const me = req.me;
+    const peer = decodeURIComponent(req.params.peer);
+    const { typing } = req.body; // true or false
+    const ts = now();
+    if (typing) {
+      const existing = prepare("SELECT 1 FROM typing_indicators WHERE username = ? AND peer = ?").get(me, peer);
+      if (existing) {
+        prepare("UPDATE typing_indicators SET typing_at = ? WHERE username = ? AND peer = ?").run(ts, me, peer);
+      } else {
+        prepare("INSERT INTO typing_indicators (username, peer, typing_at) VALUES (?, ?, ?)").run(me, peer, ts);
+      }
+    } else {
+      prepare("DELETE FROM typing_indicators WHERE username = ? AND peer = ?").run(me, peer);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(`Error in /vibes-api/typing/${req.params.peer}:`, e);
+    res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
+app.get("/vibes-api/typing/:peer", (req, res) => {
+  try {
+    const me = req.me;
+    const peer = decodeURIComponent(req.params.peer);
+    const fifteenSecondsAgo = now() - 15; // Clear typing after 15 seconds
+    // Get all users typing to this peer (within last 15 seconds)
+    const typing = prepare("SELECT username FROM typing_indicators WHERE peer = ? AND typing_at > ? AND username != ?").all(peer, fifteenSecondsAgo, me);
+    res.json({ isTyping: typing.length > 0, typingUsers: typing.map(t => t.username) });
+  } catch (e) {
+    console.error(`Error in /vibes-api/typing/${req.params.peer}:`, e);
     res.status(500).json({ error: e.message || "Server error" });
   }
 });
@@ -596,7 +714,11 @@ app.use("/vibes-api", (req, res) => {
   res.status(404).json({ error: "API endpoint not found" });
 });
 // --- Start the Server ---
-app.listen(PORT, () => {
-    console.log(`Vibes backend listening on http://localhost:${PORT}`);
-    console.log(`DB at ${DB_PATH}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+      console.log(`Vibes backend listening on http://localhost:${PORT}`);
+      console.log(`DB at ${DB_PATH}`);
+  });
+}
+
+module.exports = app;

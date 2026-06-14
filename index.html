@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Vibes">
   <meta name="theme-color" content="#000000">
-  <link rel="manifest" href="/vibes/manifest.json">
+  <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/vibes/icon.svg">
   <title>Vibes</title>
   <style>
@@ -74,6 +74,7 @@
     .av-md{width:46px;height:46px;font-size:1.05rem;}
     .av-sm{width:38px;height:38px;font-size:.85rem;}
     .av img{width:100%;height:100%;object-fit:cover;display:block;}
+    .av video{width:100%;height:100%;object-fit:cover;display:block;}
     .row-info{flex:1;min-width:0;}
     .row-name{font-weight:600;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .row-sub{font-size:.77rem;color:var(--muted);margin-top:.1rem;display:flex;gap:.4rem;flex-wrap:wrap;}
@@ -138,6 +139,7 @@
     /* DETAIL */
     .det-av{width:80px;height:80px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto .5rem;background:linear-gradient(135deg,#5e5ce6,#ff375f);}
     .det-av img{width:100%;height:100%;object-fit:cover;}
+    .det-av video{width:100%;height:100%;object-fit:cover;}
     .det-name{text-align:center;font-size:1.3rem;font-weight:700;margin-bottom:1.2rem;}
 
     /* PODIUM */
@@ -145,6 +147,7 @@
     .p-item{display:flex;flex-direction:column;align-items:center;gap:.35rem;}
     .p-av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;}
     .p-av img{width:100%;height:100%;object-fit:cover;}
+    .p-av video{width:100%;height:100%;object-fit:cover;}
     .p-name{font-size:.73rem;font-weight:600;text-align:center;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .p-base{border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:700;color:rgba(255,255,255,.65);}
 
@@ -164,9 +167,11 @@
     /* PROFILE */
     .prof-av-wrap{border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;background:linear-gradient(135deg,#ff375f,#bf5af2);}
     .prof-av-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+    .prof-av-wrap video{width:100%;height:100%;object-fit:cover;display:block;}
     .sign-out{background:rgba(255,69,58,.12);color:var(--red);border:none;font-family:inherit;font-size:.83rem;font-weight:600;padding:.4rem .85rem;border-radius:20px;cursor:pointer;}
     .prof-edit-av{width:90px;height:90px;border-radius:50%;margin:0 auto .4rem;background:linear-gradient(135deg,#ff375f,#bf5af2);display:flex;align-items:center;justify-content:center;font-size:2.2rem;font-weight:800;color:#fff;cursor:pointer;position:relative;overflow:hidden;}
     .prof-edit-av img{width:100%;height:100%;object-fit:cover;}
+    .prof-edit-av video{width:100%;height:100%;object-fit:cover;}
     .prof-edit-av-ov{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
     .change-photo-lbl{text-align:center;font-size:.85rem;color:var(--blue);font-weight:600;margin-bottom:1.2rem;cursor:pointer;}
     .field-lbl{font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;}
@@ -201,7 +206,14 @@
     .bubble{max-width:72%;padding:.6rem .85rem;border-radius:18px;font-size:.93rem;line-height:1.4;word-break:break-word;}
     .bubble.mine{background:var(--blue);color:#fff;border-bottom-right-radius:4px;}
     .bubble.theirs{background:var(--s2);color:var(--text);border-bottom-left-radius:4px;}
-    .bubble-ts{font-size:.62rem;color:var(--muted);margin-top:.2rem;padding:0 .2rem;}
+    .bubble-ts{font-size:.62rem;color:var(--muted);margin-top:.2rem;padding:0 .2rem;display:flex;align-items:center;gap:.3rem;}
+    .read-receipt{font-size:.7rem;color:var(--blue);}
+    .typing-bubble{background:var(--s2);color:var(--muted);padding:.5rem .85rem;font-size:.85rem;font-style:italic;}
+    .presence-badge{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.4rem;}
+    .presence-badge.online{background:var(--green);}
+    .presence-badge.away{background:var(--muted);}
+    .presence-badge.offline{background:var(--s3);}
+    .chat-peer-status{font-size:.68rem;color:var(--muted);margin-top:.15rem;display:flex;align-items:center;gap:.3rem;}
     .chat-input-wrap{display:flex;align-items:flex-end;gap:.6rem;padding:.7rem 1rem calc(env(safe-area-inset-bottom,20px) + .7rem);border-top:.5px solid var(--sep);background:var(--bg);flex-shrink:0;}
     .chat-input{flex:1;padding:.65rem .95rem;border-radius:20px;border:1px solid var(--sep);background:var(--s1);color:var(--text);font-size:.95rem;font-family:inherit;outline:none;resize:none;max-height:100px;line-height:1.4;}
     .chat-input:focus{border-color:var(--blue);}
@@ -262,6 +274,25 @@
       .handle::after{content:'';width:36px;height:4px;background:var(--s3);border-radius:2px;}
       .handle:active{cursor:grabbing;}
     }
+
+    /* PWA INSTALL BANNER */
+    #install-banner{position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#0a84ff,#5e5ce6);padding:max(0.75rem,env(safe-area-inset-top,0.75rem)) 1rem;z-index:99;display:none;flex-direction:column;align-items:stretch;gap:0.75rem;animation:slideDown .35s cubic-bezier(.32,.72,0,1);}
+    #install-banner.show{display:flex;}
+    #install-banner.hidden{display:none!important;}
+    @keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+    .install-banner-content{display:flex;align-items:center;gap:0.85rem;}
+    .install-banner-icon{font-size:1.5rem;flex-shrink:0;}
+    .install-banner-text{flex:1;min-width:0;}
+    .install-banner-title{font-size:0.95rem;font-weight:700;color:#fff;margin-bottom:0.15rem;}
+    .install-banner-desc{font-size:0.8rem;color:rgba(255,255,255,0.9);}
+    .install-banner-buttons{display:flex;gap:0.5rem;flex-wrap:wrap;}
+    .install-btn{padding:0.6rem 1rem;border-radius:10px;border:none;font-size:0.85rem;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;}
+    .install-btn-primary{background:#fff;color:#0a84ff;}
+    .install-btn-primary:active{opacity:0.85;transform:scale(0.98);}
+    .install-btn-secondary{background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);}
+    .install-btn-secondary:active{opacity:0.8;background:rgba(255,255,255,0.15);}
+    .install-banner-close{background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:0.25rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:opacity .15s;}
+    .install-banner-close:active{opacity:0.7;}
   </style>
 </head>
 <body>
@@ -282,6 +313,22 @@
   </form>
 </div>
 
+<!-- PWA INSTALL BANNER -->
+<div id="install-banner" style="display:flex">
+  <div class="install-banner-content">
+    <div class="install-banner-icon">✨</div>
+    <div class="install-banner-text">
+      <div class="install-banner-title">Install Vibes</div>
+      <div class="install-banner-desc">Get quick access on your home screen</div>
+    </div>
+    <button class="install-banner-close" onclick="dismissInstallBanner()" aria-label="Dismiss">✕</button>
+  </div>
+  <div class="install-banner-buttons">
+    <button class="install-btn install-btn-primary" onclick="installApp()">Install</button>
+    <button class="install-btn install-btn-secondary" onclick="dismissInstallBanner()">Keep as web</button>
+  </div>
+</div>
+
 <!-- ONBOARDING MODAL -->
 <div id="ob-overlay" onclick="obClose(event)">
   <div id="ob-sheet">
@@ -294,7 +341,12 @@
         <div class="ob-body">A private space to track where your friendships and connections actually stand. Only you see your ratings — nothing is shared.</div>
       </div>
       <div class="ob-page">
-        <div class="ob-emoji">👋</div>
+        <div class="ob-emoji">📊</div>
+        <div class="ob-title">How the Vibe Score works</div>
+        <div class="ob-body">Rate people where you want the relationship to go, not just where it is right now. Your rating is always private. You only see a Vibe Score with someone once you've rated them too — then it shows up as the lower of the two ratings. Your higher rating stays yours. Use it as an intention, not a verdict.</div>
+      </div>
+      <div class="ob-page">
+        <div class="ob-emoji">👥</div>
         <div class="ob-title">Rate your friendships</div>
         <div class="ob-body">Everyone in your life sits somewhere on the scale. Tap a dot to mark where they're at, and update it whenever the vibe shifts.</div>
         <div class="ob-detail">Acquaintance · Friend · Good Friend · Best Friend · Ride or Die</div>
@@ -308,7 +360,8 @@
       <div class="ob-page">
         <div class="ob-emoji">✨</div>
         <div class="ob-title">Rizz assist</div>
-        <div class="ob-body">Once someone's romantic vibe reaches Curious or higher, a ✨ button appears in your chat with them. Tap it and the app will suggest something to say — a little AI help when you're not sure how to move things forward.</div>
+        <div class="ob-body">AI-powered suggestions for what to say — coming soon! We're working on bringing smart, contextual message ideas to help when you're not sure how to move things forward.</div>
+        <div class="ob-detail" style="background:rgba(255,159,15,.12);border-radius:8px;border:1px solid rgba(255,159,15,.25);color:#ff9f0a;">Coming Soon</div>
       </div>
       <div class="ob-page">
         <div class="ob-emoji">🔒</div>
@@ -316,12 +369,7 @@
         <div class="ob-body">Once your Vibe Score with someone hits Dating or higher, your romantic scale gets locked for everyone else — and at the same time, anyone viewing your profile sees that you're in a relationship. The app recognises you're in something and takes you off the table. No action needed — it happens automatically.</div>
       </div>
       <div class="ob-page">
-        <div class="ob-emoji">📈</div>
-        <div class="ob-title">How the Vibe Score works</div>
-        <div class="ob-body">Rate people where you want the relationship to go, not just where it is right now. Your rating is always private. You only see a Vibe Score with someone once you've rated them too — then it shows up as the lower of the two ratings. Your higher rating stays yours. Use it as an intention, not a verdict.</div>
-      </div>
-      <div class="ob-page">
-        <div class="ob-emoji">💫</div>
+        <div class="ob-emoji">💬</div>
         <div class="ob-title">A use case</div>
         <div class="ob-body">Sam and Alex secretly like each other. Sam, ready to date, marks their vibe at Dating. Alex, wanting to take things a bit slower, marks Talking. They would have never known they liked each other — but now they're talking.</div>
       </div>
@@ -382,6 +430,7 @@
     </button>
     <div style="flex:1;min-width:0">
       <div class="chat-peer-name" id="chat-peer-name"></div>
+      <div id="chat-peer-status" class="chat-peer-status" style="display:none"></div>
       <div id="chat-streak-label" style="font-size:.72rem;font-weight:700;color:#ff9f0a;display:none"></div>
     </div>
     <div id="chat-peer-av" style="width:32px;height:32px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;color:#fff;background:linear-gradient(135deg,#5e5ce6,#ff375f);flex-shrink:0"></div>
@@ -394,7 +443,7 @@
     </button>
     <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="sendChatImage(this)"/>
     <button class="rizz-btn" id="rizz-btn" style="display:none" onclick="getRizzSuggestion()" title="Rizz suggestion">✨</button>
-    <textarea class="chat-input" id="chat-input" placeholder="Message…" rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
+    <textarea class="chat-input" id="chat-input" placeholder="Message…" rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';trackTyping()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
     <button class="chat-send" id="chat-send-btn" onclick="sendChatMessage()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
@@ -431,7 +480,6 @@
     </div>
     <div style="flex:1;padding-top:.3rem">
       <div class="det-name" id="det-name" style="text-align:left;margin-bottom:.3rem"></div>
-      <div id="det-bio" style="font-size:.82rem;color:var(--muted);line-height:1.5;display:none"></div>
     </div>
   </div>
   <div id="det-scales"></div>
@@ -446,13 +494,10 @@
   <div class="sheet-title">Edit Profile</div>
   <div class="prof-edit-av" id="prof-edit-av" onclick="document.getElementById('photo-input').click()"></div>
   <div class="change-photo-lbl" onclick="document.getElementById('photo-input').click()">Change Photo</div>
-  <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)"/>
+  <input type="file" id="photo-input" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4" style="display:none" onchange="handlePhotoUpload(event)"/>
   <div class="field-lbl">Display Name</div>
   <input class="sheet-input" id="prof-displayname" type="text" placeholder="Display name" maxlength="30"/>
   <div style="font-size:.78rem;color:var(--muted);padding:0 .2rem .8rem">Username: <span id="prof-username-lbl" style="color:var(--text2)"></span></div>
-  <div class="field-lbl">Bio</div>
-  <textarea class="sheet-input" id="prof-bio" placeholder="Say something about yourself…" maxlength="160" rows="3" style="resize:none;line-height:1.5"></textarea>
-  <div style="font-size:.72rem;color:var(--muted);text-align:right;padding:0 .2rem .6rem" id="prof-bio-count">0 / 160</div>
   <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .2rem .9rem">
     <div>
       <div style="font-size:.95rem;font-weight:600;color:var(--text)">🔥 Streaks</div>
@@ -489,7 +534,7 @@ const SCALES = {
 
 // ── Auth & State ──────────────────────────────────────────────────────────────
 let me=null, myPw=null, isSignUp=false;
-let _state={people:[],hiddenScales:[],pendingRequests:[],sentRequests:[],displayName:'',photoDataUrl:null,bio:'',streaksEnabled:false};
+let _state={people:[],hiddenScales:[],pendingRequests:[],sentRequests:[],displayName:'',photoDataUrl:null,streaksEnabled:false};
 
 function apiHeaders(){return{'Content-Type':'application/json','x-username':me,'x-password':myPw};}
 async function apiReq(method,path,body){
@@ -580,7 +625,7 @@ async function authGo(){
   try{
     const res=await fetch(API+(isSignUp?'/auth/signup':'/auth/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
     const d=await res.json();
-    if(!res.ok)throw d;
+    if(!res.ok)throw d||{error:'Server error'};
     me=u;myPw=p;
     localStorage.setItem('vb_sess',JSON.stringify({u,p}));
     errEl.textContent='';
@@ -590,7 +635,7 @@ async function authGo(){
     if(isSignUp && !localStorage.getItem('vb_seen_ob_'+u)){
       setTimeout(()=>obOpen(),300);
     }
-  }catch(e){errEl.textContent=e?.error||'Something went wrong';}
+  }catch(e){errEl.textContent=(typeof e==='object'?e?.error:e)||'Something went wrong';}
   btn.disabled=false;
 }
 
@@ -616,6 +661,9 @@ function enterApp(){
   loadMe();
   setInterval(loadMe,30000);
   setInterval(pollMessages,8000);
+  // Update presence when app loads and periodically
+  updatePresence('online');
+  setInterval(()=>updatePresence('online'),60000); // Every 60 seconds
   fetch(API+'/track/open',{method:'POST',headers:apiHeaders()}).catch(()=>{});
   registerPush();
 }
@@ -675,10 +723,17 @@ function effectiveForPerson(p,type){
   return p.effectiveRomanticIndex??null;
 }
 
+function isVideoDataUrl(url){
+  return url&&url.startsWith('data:video/');
+}
+function mediaElement(dataUrl){
+  if(isVideoDataUrl(dataUrl))return `<video src="${esc(dataUrl)}" style="width:100%;height:100%;object-fit:cover" autoplay muted loop playsinline></video>`;
+  return `<img src="${esc(dataUrl)}" style="width:100%;height:100%;object-fit:cover"/>`;
+}
 function personAvatarHtml(person,size,fontSize){
   const bg=SCALES[person.romanticIndex!=null?'romantic':'friend'].color;
   if(person.photoDataUrl)
-    return `<div class="av" style="width:${size}px;height:${size}px;font-size:${fontSize}px;background:${bg}"><img src="${esc(person.photoDataUrl)}"/></div>`;
+    return `<div class="av" style="width:${size}px;height:${size}px;font-size:${fontSize}px;background:${bg}">${mediaElement(person.photoDataUrl)}</div>`;
   return `<div class="av" style="width:${size}px;height:${size}px;font-size:${fontSize}px;background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(person.name))}</div>`;
 }
 
@@ -724,7 +779,7 @@ async function findFromContacts(){
       else                  btnHtml=`<button class="add-btn" onclick="sendRequest('${u.username}')">Add</button>`;
       const name=u.displayName||u.username;
       const avHtml=u.photoDataUrl
-        ?`<div class="av av-md"><img src="${esc(u.photoDataUrl)}"/></div>`
+        ?`<div class="av av-md">${mediaElement(u.photoDataUrl)}</div>`
         :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(name))}</div>`;
       return `<div class="search-row">${avHtml}<div class="row-info"><div class="row-name">${esc(name)}</div><div class="row-sub">${esc(u.username)}</div></div><div class="search-act">${btnHtml}</div></div>`;
     }).join('');
@@ -749,7 +804,7 @@ function renderSearch(){
       else                  btnHtml=`<button class="add-btn" onclick="sendRequest('${u.username}')">Add</button>`;
       const name=u.displayName||u.username;
       const avHtml=u.photoDataUrl
-        ?`<div class="av av-md"><img src="${esc(u.photoDataUrl)}"/></div>`
+        ?`<div class="av av-md">${mediaElement(u.photoDataUrl)}</div>`
         :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(name))}</div>`;
       return `<div class="search-row">${avHtml}<div class="row-info"><div class="row-name">${esc(name)}</div><div class="row-sub">${esc(u.username)}</div></div><div class="search-act">${btnHtml}</div></div>`;
     }).join('');
@@ -806,15 +861,6 @@ async function openDetail(id){
   };
   openSheet('det');
   initSheetSwipe('det',undoDetChanges);
-  // Fetch bio if connected user
-  const bioEl=document.getElementById('det-bio');
-  bioEl.style.display='none';bioEl.textContent='';
-  if(p.sourceUsername){
-    try{
-      const u=await apiReq('GET','/users/'+p.sourceUsername);
-      if(u.bio){bioEl.textContent=u.bio;bioEl.style.display='block';}
-    }catch{}
-  }
 }
 
 async function undoDetChanges(){
@@ -838,7 +884,7 @@ async function togglePersonRomantic(id){
 
 function renderDetail(p){
   const av=document.getElementById('det-av');
-  if(p.photoDataUrl){av.innerHTML=`<img src="${esc(p.photoDataUrl)}"/>`;av.style.background='none';}
+  if(p.photoDataUrl){av.innerHTML=mediaElement(p.photoDataUrl);av.style.background='none';}
   else{av.innerHTML=ini(p.name);av.style.background='linear-gradient(135deg,#5e5ce6,#ff375f)';}
   document.getElementById('det-name').textContent=p.name;
   const ownShowRom=p.showRomantic!==false;
@@ -922,7 +968,7 @@ function renderPeople(){
     sec.innerHTML=`<div class="sec"><div class="sec-hdr">Requests (${reqs.length})</div>
     <div class="card-list">${reqs.map(r=>{
       const avHtml=r.photoDataUrl
-        ?`<div class="av av-md"><img src="${esc(r.photoDataUrl)}"/></div>`
+        ?`<div class="av av-md">${mediaElement(r.photoDataUrl)}</div>`
         :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(r.name))}</div>`;
       return `<div class="req-row">
         ${avHtml}
@@ -945,7 +991,7 @@ function renderPeople(){
       <div class="card-list">${sent.map(r=>{
         const name=r.name||r.toUsername||'?';
         const avHtml=r.photoDataUrl
-          ?`<div class="av av-md"><img src="${esc(r.photoDataUrl)}"/></div>`
+          ?`<div class="av av-md">${mediaElement(r.photoDataUrl)}</div>`
           :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(name))}</div>`;
         return `<div class="req-row">
           ${avHtml}
@@ -996,7 +1042,7 @@ function renderSettings(){
   const {displayName,photoDataUrl}=getProfile();
   const dispName=displayName||me;
   const profAvHtml=photoDataUrl
-    ?`<div class="prof-av-wrap" style="width:72px;height:72px"><img src="${esc(photoDataUrl)}"/></div>`
+    ?`<div class="prof-av-wrap" style="width:72px;height:72px">${mediaElement(photoDataUrl)}</div>`
     :`<div class="prof-av-wrap" style="width:72px;height:72px;font-size:1.7rem">${esc(dispName[0].toUpperCase())}</div>`;
   document.getElementById('settings-body').innerHTML=`
     <div class="sec"><div class="card-list">
@@ -1070,15 +1116,11 @@ function updateStreaksToggle(checked){
 function openProfileEdit(){
   const {displayName,photoDataUrl}=getProfile();
   const av=document.getElementById('prof-edit-av');
-  if(photoDataUrl){av.innerHTML=`<img src="${esc(photoDataUrl)}"/>`;}
+  if(photoDataUrl){av.innerHTML=mediaElement(photoDataUrl);}
   else{av.innerHTML=`${(displayName||(me||'?'))[0].toUpperCase()}`;}
   av._pendingPhoto=undefined;
   document.getElementById('prof-displayname').value=displayName;
   document.getElementById('prof-username-lbl').textContent=me;
-  const bioEl=document.getElementById('prof-bio');
-  bioEl.value=_state.bio||'';
-  document.getElementById('prof-bio-count').textContent=`${bioEl.value.length} / 160`;
-  bioEl.oninput=()=>{document.getElementById('prof-bio-count').textContent=`${bioEl.value.length} / 160`;};
   const streaksEl=document.getElementById('prof-streaks');
   streaksEl.checked=!!_state.streaksEnabled;
   updateStreaksToggle(streaksEl.checked);
@@ -1091,20 +1133,18 @@ function handlePhotoUpload(e){
   reader.onload=ev=>{
     const url=ev.target.result;
     const av=document.getElementById('prof-edit-av');
-    av.innerHTML=`<img src="${esc(url)}"/>`;
+    av.innerHTML=mediaElement(url);
     av._pendingPhoto=url;
   };
   reader.readAsDataURL(file);
 }
 async function saveProfile(){
   const displayName=document.getElementById('prof-displayname').value.trim();
-  const bio=document.getElementById('prof-bio').value.trim();
   const streaksEnabled=document.getElementById('prof-streaks').checked;
   const pending=document.getElementById('prof-edit-av')._pendingPhoto;
-  const update={displayName,bio,streaksEnabled};
+  const update={displayName,streaksEnabled};
   if(pending!==undefined)update.photoDataUrl=pending;
   _state.displayName=displayName;
-  _state.bio=bio;
   _state.streaksEnabled=streaksEnabled;
   if(pending!==undefined)_state.photoDataUrl=pending;
   await apiReq('PATCH','/me',update);
@@ -1133,7 +1173,7 @@ function renderNewMsgList(){
   }
   el.innerHTML=connected.map(p=>{
     const avHtml=p.photoDataUrl
-      ?`<div class="av av-md"><img src="${esc(p.photoDataUrl)}"/></div>`
+      ?`<div class="av av-md">${mediaElement(p.photoDataUrl)}</div>`
       :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(p.name))}</div>`;
     return `<div class="search-row" style="cursor:pointer" onclick="closeSheet('newmsg');openChat('${esc(p.sourceUsername)}','${esc(p.name)}',${JSON.stringify(p.photoDataUrl)})">
       ${avHtml}
@@ -1168,7 +1208,7 @@ async function renderMessages(){
   el.innerHTML=`<div class="sec"><div class="card-list">${convos.map(c=>{
     const avBg='linear-gradient(135deg,#5e5ce6,#ff375f)';
     const avHtml=c.photoDataUrl
-      ?`<div class="av av-md"><img src="${esc(c.photoDataUrl)}"/></div>`
+      ?`<div class="av av-md">${mediaElement(c.photoDataUrl)}</div>`
       :`<div class="av av-md" style="background:${avBg}">${esc(ini(c.name))}</div>`;
     const ts=formatMsgTs(c.ts);
     const unreadHtml=c.unread?`<div class="msg-unread">${c.unread>9?'9+':c.unread}</div>`:'';
@@ -1204,18 +1244,27 @@ async function openChat(username, name, photoDataUrl, streakCount){
   if(_state.streaksEnabled&&(streakCount||0)>0){streakEl.textContent='🔥 '+streakCount+' day streak';streakEl.style.display='';}
   else{streakEl.style.display='none';}
   const avEl=document.getElementById('chat-peer-av');
-  if(photoDataUrl){avEl.innerHTML=`<img src="${esc(photoDataUrl)}" style="width:100%;height:100%;object-fit:cover"/>`;avEl.style.background='none';}
+  if(photoDataUrl){avEl.innerHTML=mediaElement(photoDataUrl);avEl.style.background='none';}
   else{avEl.innerHTML=ini(name);avEl.style.background='linear-gradient(135deg,#5e5ce6,#ff375f)';}
   // Show rizz button if romantic effective score is Curious (1) or higher
+  // FEATURE HIDDEN: Coming Soon - keep code for future implementation
   const person=people().find(p=>p.sourceUsername===username);
-  const rizzEligible=person&&(person.effectiveRomanticIndex??-1)>=1;
+  const rizzEligible=false; // person&&(person.effectiveRomanticIndex??-1)>=1;
   document.getElementById('rizz-btn').style.display=rizzEligible?'':'none';
   document.getElementById('rizz-bar').className='rizz-bar';
   document.getElementById('chat-screen').classList.add('show');
   document.getElementById('chat-input').value='';
+  
+  // Update presence when opening chat
+  await updatePresence('online');
+  
   await renderChatMessages();
   clearInterval(_chatPollTimer);
-  _chatPollTimer=setInterval(renderChatMessages,4000);
+  _chatPollTimer=setInterval(async()=>{
+    await renderChatMessages();
+    await updateChatPresence();
+    await checkTypingStatus();
+  },3000);
 }
 
 function closeChat(){
@@ -1223,6 +1272,10 @@ function closeChat(){
   sc.style.transition='';sc.style.transform='';
   sc.classList.remove('show');
   clearInterval(_chatPollTimer);
+  if(_chatPeer){
+    // Clear typing indicator
+    apiReq('POST','/typing/'+_chatPeer.username,{typing:false}).catch(()=>{});
+  }
   _chatPeer=null;
   if(curTab==='messages') renderMessages();
 }
@@ -1276,18 +1329,29 @@ async function renderChatMessages(){
   // Find index of last read sent message for read receipt
   let lastReadIdx=-1;
   msgs.forEach((m,i)=>{if(m.from===me&&m.read)lastReadIdx=i;});
-  el.innerHTML=msgs.map((m,i)=>{
+  
+  let html=msgs.map((m,i)=>{
     const mine=m.from===me;
     const isImg=m.body.startsWith('data:image/');
     const bubbleContent=isImg
       ?`<img src="${m.body}" loading="lazy"/>`
       :esc(m.body);
-    const receipt=(mine&&i===lastReadIdx)?`<div class="read-receipt">Read</div>`:'';
+    const receipt=(mine&&i===lastReadIdx)?`<div class="read-receipt">✓✓ Read</div>`:'';
     return `<div class="bubble-wrap ${mine?'mine':'theirs'}">
       <div class="bubble ${mine?'mine':'theirs'}${isImg?' img-bubble':''}">${bubbleContent}</div>
-      <div class="bubble-ts">${formatMsgTs(m.ts)}</div>${receipt}
+      <div class="bubble-ts">${formatMsgTs(m.ts)}${receipt}</div>
     </div>`;
-  }).join('')||`<div class="empty" style="margin:auto"><div class="empty-ico">👋</div><div class="empty-sub">Say hello!</div></div>`;
+  }).join('');
+  
+  // Check for typing indicator
+  try{
+    const typingRes=await apiReq('GET','/typing/'+_chatPeer.username);
+    if(typingRes.isTyping){
+      html+=`<div class="bubble-wrap theirs"><div class="bubble typing-bubble">typing…</div></div>`;
+    }
+  }catch(e){}
+  
+  el.innerHTML=html||`<div class="empty" style="margin:auto"><div class="empty-ico">👋</div><div class="empty-sub">Say hello!</div></div>`;
   if(wasAtBottom||msgs.length===0) el.scrollTop=el.scrollHeight;
 }
 
@@ -1301,6 +1365,11 @@ async function sendChatMessage(){
   input.value='';
   input.style.height='auto';
   try{
+    // Clear typing indicator
+    await apiReq('POST','/typing/'+_chatPeer.username,{typing:false}).catch(()=>{});
+    // Update presence to online
+    await updatePresence('online');
+    // Send message
     await apiReq('POST','/messages/'+_chatPeer.username,{body});
     await renderChatMessages();
     document.getElementById('chat-messages').scrollTop=document.getElementById('chat-messages').scrollHeight;
@@ -1311,6 +1380,12 @@ async function sendChatMessage(){
 async function getRizzSuggestion(){
   if(!_chatPeer) return;
   const bar=document.getElementById('rizz-bar');
+  const apiKey=window._anthropicKey;
+  if(!apiKey){
+    bar.innerHTML=`<div class="rizz-loading" style="color:var(--red)">Anthropic API key not configured</div>`;
+    bar.className='rizz-bar show';
+    return;
+  }
   bar.innerHTML=`<div class="rizz-loading">Getting suggestions…</div>`;
   bar.className='rizz-bar show';
   // Grab last 10 messages for context
@@ -1322,11 +1397,11 @@ async function getRizzSuggestion(){
   const romanticSteps=['No Attraction','Curious','Talking','Dating','Partner','Soulmate'];
   const vibeLabel=person&&person.effectiveRomanticIndex!=null?romanticSteps[person.effectiveRomanticIndex]:'Curious';
   try{
-    const res=await fetch('https://api.anthropic.com.proxy.chorus.com/v1/messages',{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':window._anthropicKey||'sk-ant-api03-gu2gohc4sha1Thohpeep7ro9vie1ikai-n0tr3al','anthropic-version':'2023-06-01'},
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
       body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
+        model:'claude-3-5-sonnet-20241022',
         max_tokens:200,
         messages:[{role:'user',content:`You are helping someone flirt. Their romantic Vibe Score with ${_chatPeer.name} is "${vibeLabel}". Give 3 short, witty, natural message suggestions they could send next. Keep each under 12 words. No quotes, no numbering, just one per line. Recent chat:\n${history||'(no messages yet)'}`}]
       })
@@ -1376,9 +1451,131 @@ async function sendChatImage(input){
   reader.readAsDataURL(file);
 }
 
+// ── PRESENCE & TYPING ─────────────────────────────────────────────────────────
+let _typingTimeout=null;
+let _presenceUpdateTime=0;
+
+async function updatePresence(status){
+  try{
+    const now=Date.now();
+    if(now-_presenceUpdateTime<5000) return; // Throttle to 5s
+    _presenceUpdateTime=now;
+    await apiReq('POST','/presence/update',{status:status||'online'}).catch(()=>{});
+  }catch(e){}
+}
+
+async function trackTyping(){
+  if(!_chatPeer) return;
+  clearTimeout(_typingTimeout);
+  try{
+    await apiReq('POST','/typing/'+_chatPeer.username,{typing:true}).catch(()=>{});
+  }catch(e){}
+  _typingTimeout=setTimeout(()=>{
+    apiReq('POST','/typing/'+_chatPeer.username,{typing:false}).catch(()=>{});
+  },3000);
+}
+
+async function updateChatPresence(){
+  if(!_chatPeer) return;
+  try{
+    const presenceRes=await apiReq('GET','/presence/'+_chatPeer.username);
+    const statusEl=document.getElementById('chat-peer-status');
+    const statusTexts={
+      'online':'Online',
+      'away':'Away',
+      'offline':'Last seen'
+    };
+    const badge=`<div class="presence-badge ${presenceRes.status}"></div>`;
+    const statusText=statusTexts[presenceRes.status]||'Offline';
+    const lastSeenText=presenceRes.lastSeen>0?` ${formatMsgTs(presenceRes.lastSeen)}`:'';
+    statusEl.innerHTML=`${badge}${statusText}${lastSeenText}`;
+    statusEl.style.display='';
+  }catch(e){}
+}
+
+async function checkTypingStatus(){
+  if(!_chatPeer) return;
+  try{
+    const typingRes=await apiReq('GET','/typing/'+_chatPeer.username);
+  }catch(e){}
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 (()=>{const s=localStorage.getItem('vb_sess');if(s){try{const {u,p}=JSON.parse(s);me=u;myPw=p;document.getElementById('auth').style.display='none';enterApp();}catch(e){localStorage.removeItem('vb_sess');}}})();
 </script>
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/vibes/sw.js').then(r=>{if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});r.addEventListener('updatefound',()=>{const w=r.installing;w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)window.location.reload();});});});}</script>
+
+<!-- SERVICE WORKER & PWA INSTALLATION -->
+<script>
+// Register service worker for PWA functionality
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').then(r=>{
+    if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'});
+    r.addEventListener('updatefound',()=>{
+      const w=r.installing;
+      w.addEventListener('statechange',()=>{
+        if(w.state==='installed'&&navigator.serviceWorker.controller)window.location.reload();
+      });
+    });
+  }).catch(err=>console.warn('Service Worker registration failed:', err));
+}
+
+// PWA Install Prompt Handling
+let deferredPrompt=null;
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const banner=document.getElementById('install-banner');
+  if(window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches){
+    banner.style.display='none';
+  } else {
+    banner.style.display='flex';
+  }
+});
+
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  showInstallBanner();
+});
+
+window.addEventListener('appinstalled',()=>{
+  hideInstallBanner();
+  deferredPrompt=null;
+});
+
+function showInstallBanner(){
+  const banner=document.getElementById('install-banner');
+  if(!window.matchMedia('(display-mode: standalone)').matches){
+    banner.style.display='flex';
+  }
+}
+
+function hideInstallBanner(){
+  const banner=document.getElementById('install-banner');
+  banner.style.display='none';
+}
+
+function installApp(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choiceResult=>{
+      if(choiceResult.outcome==='accepted'){
+        hideInstallBanner();
+      } else {
+        showInstallBanner();
+      }
+    });
+  } else {
+    alert('To install Vibes on your home screen:\n\niPhone: Tap Share → Add to Home Screen\n\nAndroid: Tap Menu → Install app\n\nDesktop: use your browser menu to install the app.');
+  }
+}
+
+function dismissInstallBanner(){
+  hideInstallBanner();
+}
+
+if(window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches){
+  hideInstallBanner();
+}
+</script>
 </body>
 </html>
