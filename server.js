@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { randomUUID } = require('crypto');
-const Database = require('better-sqlite3');
+const { initDb } = require('./db-wrapper');
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const defaultDbDir = process.env.DB_PATH ? path.dirname(process.env.DB_PATH) : (process.env.VERCEL ? os.tmpdir() : __dirname);
@@ -26,11 +26,40 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const db = new Database(DB_PATH);
-db.exec(`PRAGMA journal_mode = WAL;`);
+let db;
+let dbInitialized = false;
+let dbPromise;
 
-// Create tables
-db.exec(`
+// Initialize DB promise immediately
+async function initializeDb() {
+  if (!dbInitialized) {
+    db = await setupDb();
+    dbInitialized = true;
+  }
+  return db;
+}
+
+dbPromise = initializeDb();
+
+// Middleware to ensure DB is ready before handling requests
+app.use((req, res, next) => {
+  if (dbInitialized) {
+    next();
+  } else {
+    dbPromise.then(() => next()).catch((err) => {
+      console.error('DB initialization error:', err);
+      res.status(500).json({ error: 'Database initialization failed' });
+    });
+  }
+});
+
+
+async function setupDb() {
+  db = await initDb(DB_PATH);
+  db.exec(`PRAGMA journal_mode = WAL;`);
+
+  // Create tables
+  db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   username TEXT PRIMARY KEY,
   password TEXT NOT NULL,
@@ -99,17 +128,15 @@ CREATE TABLE IF NOT EXISTS typing_indicators (
   PRIMARY KEY (username, peer)
 );
 `);
+}
 // --- Utility Functions ---
 
 const now = () => Math.floor(Date.now() / 1000);
 
-// Helper for preparing statements to avoid re-compiling queries with better-sqlite3
-const statements = new Map();
+// Helper for preparing statements
 function prepare(query) {
-    if (!statements.has(query)) {
-        statements.set(query, db.prepare(query));
-    }
-    return statements.get(query);
+    return db.prepare(query);
+
 }
 
 function authenticate(req) {
@@ -715,10 +742,17 @@ app.use("/vibes-api", (req, res) => {
 });
 // --- Start the Server ---
 if (require.main === module) {
-  app.listen(PORT, () => {
-      console.log(`Vibes backend listening on http://localhost:${PORT}`);
+  dbPromise.then(() => {
+    app.listen(PORT, () => {
+        console.log(`Vibes backend listening on http://localhost:${PORT}`);
       console.log(`DB at ${DB_PATH}`);
+    });
+  }).catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
   });
 }
 
 module.exports = app;
+
+
