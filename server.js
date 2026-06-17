@@ -72,8 +72,12 @@ app.use((req, res, next) => {
 });
 
 
+function initDb(dbPath) {
+  return new Database(dbPath);
+}
+
 async function setupDb() {
-  db = await initDb(DB_PATH);
+  db = initDb(DB_PATH);
   db.exec(`PRAGMA journal_mode = WAL;`);
 
   // Create tables

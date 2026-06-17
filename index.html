@@ -422,6 +422,9 @@
     <input class="people-search" id="people-search" type="text" placeholder="Search added people…" autocomplete="off" oninput="renderPeople()" onblur="this.value='';renderPeople()"/>
     <div id="feedback-msg" style="font-size:.82rem;color:var(--muted);padding:.4rem 0 0;text-align:center;width:100%;">Feedback for the app? Message Rory</div>
   </div>
+  <div class="people-search-wrap" id="msg-search-wrap">
+    <input class="people-search" id="msg-search" type="text" placeholder="Search messages…" autocomplete="off" oninput="filterMessages()"/>
+  </div>
   <div class="content">
     <div class="pane show" id="pane-people"><div id="people-body"></div></div>
     <div class="pane" id="pane-messages"><div id="messages-body"></div></div>
@@ -1253,7 +1256,8 @@ function goTab(t,btn){
   document.getElementById('ntitle').textContent=titles[t];
   document.getElementById('nplus-wrap').style.display=t==='people'?'':'none';
   document.getElementById('ncompose-wrap').style.display=t==='messages'?'':'none';
-  if(t==='messages') renderMessages();
+  const msw=document.getElementById('msg-search-wrap');
+  if(t==='messages'){msw.classList.add('show');renderMessages();}else{msw.classList.remove('show');document.getElementById('msg-search').value='';}
   const sw=document.getElementById('people-search-wrap');
   if(t==='people'){sw.classList.add('show');}else{sw.classList.remove('show');document.getElementById('people-search').value='';renderPeople();renderSettings();}
 }
@@ -1916,6 +1920,48 @@ async function renderMessages(){
     const avHtml=c.photoDataUrl
       ?`<div class="av av-md">${mediaElement(c.photoDataUrl)}</div>`
       :`<div class="av av-md" style="background:${avBg}">${esc(ini(c.name))}</div>`;
+    const ts=formatMsgTs(c.ts);
+    const unreadHtml=c.unread?`<div class="msg-unread">${c.unread>9?'9+':c.unread}</div>`:'';
+    const streakHtml=(_state.streaksEnabled&&c.streakCount>0)?`<div style="font-size:.72rem;font-weight:700;color:#ff9f0a">🔥${c.streakCount}</div>`:'';
+    return `<div class="msg-convo" onclick="openChat('${esc(c.username)}','${esc(c.name)}',${JSON.stringify(c.photoDataUrl)},${c.streakCount||0})">
+      ${avHtml}
+      <div class="row-info">
+        <div class="row-name">${esc(c.name)}</div>
+        ${c.lastMessage&&c.lastMessage.startsWith('data:image/')?`<img class="msg-img-thumb" src="${c.lastMessage}"/>`:`<div class="msg-preview">${esc(c.lastMessage)}</div>`}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
+        <div class="msg-ts">${ts}</div>
+        ${streakHtml}
+        ${unreadHtml}
+      </div>
+    </div>`;
+  }).join('')}</div></div>`;
+}
+
+function filterMessages(){
+  const q=(document.getElementById('msg-search').value||'').toLowerCase().trim();
+  const el=document.getElementById('messages-body');
+  if(!_convos.length) return;
+  if(!q){
+    // Re-render full list
+    renderMessages();
+    return;
+  }
+  const isImageQuery=/^(image|photo|pic|picture|img)s?$/i.test(q)||q==='📷'||q==='🖼️';
+  const filtered=_convos.filter(c=>{
+    if(isImageQuery) return c.lastMessage&&c.lastMessage.startsWith('data:image/');
+    const nameMatch=c.name.toLowerCase().includes(q)||c.username.toLowerCase().includes(q);
+    const msgMatch=c.lastMessage&&!c.lastMessage.startsWith('data:image/')&&c.lastMessage.toLowerCase().includes(q);
+    const imgMatch=c.lastMessage&&c.lastMessage.startsWith('data:image/')&&'image photo picture'.includes(q);
+    return nameMatch||msgMatch||imgMatch;
+  });
+  if(!filtered.length){
+    el.innerHTML=`<div class="empty"><div class="empty-sub">${L('noResults')}</div></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="sec"><div class="card-list">${filtered.map(c=>{
+    const avBg='linear-gradient(135deg,#5e5ce6,#ff375f)';
+    const avHtml=c.photoDataUrl?`<div class="av av-md">${mediaElement(c.photoDataUrl)}</div>`:`<div class="av av-md" style="background:${avBg}">${esc(ini(c.name))}</div>`;
     const ts=formatMsgTs(c.ts);
     const unreadHtml=c.unread?`<div class="msg-unread">${c.unread>9?'9+':c.unread}</div>`:'';
     const streakHtml=(_state.streaksEnabled&&c.streakCount>0)?`<div style="font-size:.72rem;font-weight:700;color:#ff9f0a">🔥${c.streakCount}</div>`:'';
