@@ -371,21 +371,6 @@
   </div>
 </div>
 
-<!-- PWA INSTALL BANNER -->
-<div id="install-banner" style="display:flex">
-  <div class="install-banner-content">
-    <div class="install-banner-icon">✨</div>
-    <div class="install-banner-text">
-      <div class="install-banner-title">Install Vibes</div>
-      <div class="install-banner-desc">Get quick access on your home screen</div>
-    </div>
-    <button class="install-banner-close" onclick="dismissInstallBanner()" aria-label="Dismiss">✕</button>
-  </div>
-  <div class="install-banner-buttons">
-    <button class="install-btn install-btn-primary" onclick="installApp()">Install</button>
-    <button class="install-btn install-btn-secondary" onclick="dismissInstallBanner()">Keep as web</button>
-  </div>
-</div>
 
 <!-- ONBOARDING MODAL -->
 <div id="ob-overlay" onclick="obClose(event)">
@@ -2246,59 +2231,14 @@ if('serviceWorker' in navigator){
 // PWA Install Prompt Handling
 let deferredPrompt=null;
 
-window.addEventListener('DOMContentLoaded',()=>{
-  const banner=document.getElementById('install-banner');
-  if(window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches){
-    banner.style.display='none';
-  } else {
-    banner.style.display='flex';
-  }
-});
-
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault();
-  deferredPrompt=e;
-  showInstallBanner();
-});
-
-window.addEventListener('appinstalled',()=>{
-  hideInstallBanner();
-  deferredPrompt=null;
-});
-
-function showInstallBanner(){
-  const banner=document.getElementById('install-banner');
-  if(!window.matchMedia('(display-mode: standalone)').matches){
-    banner.style.display='flex';
-  }
-}
-
-function hideInstallBanner(){
-  const banner=document.getElementById('install-banner');
-  banner.style.display='none';
-}
-
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;_installAvailable=true;});
+window.addEventListener('appinstalled',()=>{deferredPrompt=null;_installAvailable=false;});
+function showInstallBanner(){}
+function hideInstallBanner(){}
+function dismissInstallBanner(){}
 function installApp(){
-  if(deferredPrompt){
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(choiceResult=>{
-      if(choiceResult.outcome==='accepted'){
-        hideInstallBanner();
-      } else {
-        showInstallBanner();
-      }
-    });
-  } else {
-    alert('To install Vibes on your home screen:\n\niPhone: Tap Share → Add to Home Screen\n\nAndroid: Tap Menu → Install app\n\nDesktop: use your browser menu to install the app.');
-  }
-}
-
-function dismissInstallBanner(){
-  hideInstallBanner();
-}
-
-if(window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches){
-  hideInstallBanner();
+  if(deferredPrompt){deferredPrompt.prompt();}
+  else{alert('To install Vibes on your home screen:\n\niPhone: Tap Share → Add to Home Screen\n\nAndroid: Tap Menu → Install app');}
 }
 </script>
 </body>
