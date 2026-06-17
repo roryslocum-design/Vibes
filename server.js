@@ -170,6 +170,7 @@ try { db.exec(`ALTER TABLE users ADD COLUMN ad_gender TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN ad_hobbies TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN ad_lat TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN ad_lon TEXT`); } catch (e) {}
+  return db;
 }
 // --- Utility Functions ---
 
