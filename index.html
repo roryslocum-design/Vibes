@@ -358,7 +358,7 @@
     </div>
     <div class="auth-switch" id="aswitch" onclick="toggleMode()">Don't have an account? <b>Sign Up</b></div>
   </form>
-  <button class="install-btn" id="install-banner" style="display:none" onclick="handleInstallClick()">Install as App</button>
+  <button id="install-banner" style="display:none;margin-top:1rem;background:var(--s1);border:1px solid var(--sep);border-radius:14px;padding:.85rem 1.5rem;color:var(--text);font-size:.9rem;font-weight:600;font-family:inherit;cursor:pointer;width:calc(100% - 4rem);max-width:340px" onclick="handleInstallClick()">Install as App</button>
 </div>
 
 <!-- INSTALL INSTRUCTIONS MODAL -->
@@ -583,6 +583,7 @@ let _installAvailable=false;
 function isSettingsTabActive(){return document.getElementById('tab-settings')?.classList.contains('on');}
 function maybeShowInstallButton(){
   if(isStandalone())return;
+  if(!_deferredInstallPrompt)return;
   _installAvailable=true;
   document.getElementById('install-banner').style.display='flex';
   if(isSettingsTabActive()) renderSettings();
