@@ -552,6 +552,29 @@
 // ── Install button ───────────────────────────────────────────────────────────
 let _deferredInstallPrompt=null;
 function isStandalone(){return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;}
+if(isStandalone()) localStorage.setItem('vb_pwa_installed','1');
+function isPwaInstalled(){return !!localStorage.getItem('vb_pwa_installed');}
+function updateInstallButton(){
+  const btn=document.getElementById('install-banner');
+  if(!btn) return;
+  if(isStandalone()){btn.style.display='none';return;}
+  if(isPwaInstalled()){
+    btn.style.display='flex';
+    btn.textContent='Open App';
+    btn.onclick=()=>{
+      // Try to open the installed PWA — works on Android; on iOS show a tip
+      const url=location.href.split('?')[0];
+      window.location.href=url;
+      setTimeout(()=>alert('Tip: On iPhone, find Vibes on your Home Screen to open the app.'),1200);
+    };
+  } else if(_deferredInstallPrompt){
+    btn.style.display='flex';
+    btn.textContent=L('installApp')||'Install as App';
+    btn.onclick=handleInstallClick;
+  } else {
+    btn.style.display='none';
+  }
+}
 function getPlatform(){
   const ua=navigator.userAgent||'';
   const isIOS=/iPad|iPhone|iPod/.test(ua)&&!window.MSStream;
@@ -582,15 +605,13 @@ window.addEventListener('appinstalled',()=>{
 let _installAvailable=false;
 function isSettingsTabActive(){return document.getElementById('tab-settings')?.classList.contains('on');}
 function maybeShowInstallButton(){
-  if(isStandalone())return;
-  if(!_deferredInstallPrompt)return;
-  _installAvailable=true;
-  document.getElementById('install-banner').style.display='flex';
+  _installAvailable=!!_deferredInstallPrompt||isPwaInstalled();
+  updateInstallButton();
   if(isSettingsTabActive()) renderSettings();
 }
 function hideInstallButton(){
   _installAvailable=false;
-  document.getElementById('install-banner').style.display='none';
+  updateInstallButton();
   if(isSettingsTabActive()) renderSettings();
 }
 async function handleInstallClick(){
@@ -673,7 +694,7 @@ function showInstallModal(plat){
   document.getElementById('install-modal').classList.add('show');
 }
 function closeInstallModal(){document.getElementById('install-modal').classList.remove('show');}
-maybeShowInstallButton();
+updateInstallButton();maybeShowInstallButton();
 
 // ── Scales ────────────────────────────────────────────────────────────────────
 const API='/vibes-api';
@@ -1627,8 +1648,8 @@ function renderSettings(){
         <button onclick="openProfileEdit()" style="margin-top:.5rem;background:var(--s2);border:none;color:var(--blue);font-family:inherit;font-size:.85rem;font-weight:600;padding:.45rem 1.1rem;border-radius:20px;cursor:pointer">${L('editProfile')}</button>
       </div>
     </div></div>
-    ${_installAvailable?`<div class="sec"><div class="card-list" style="padding:.7rem">
-      <button class="install-btn" style="position:static;transform:none;width:100%;max-width:none;margin:0" onclick="handleInstallClick()">${L('installApp')}</button>
+    ${(_installAvailable&&!isStandalone())?`<div class="sec"><div class="card-list" style="padding:.7rem">
+      <button class="install-btn" style="position:static;transform:none;width:100%;max-width:none;margin:0" onclick="handleInstallClick()">${isPwaInstalled()&&!_deferredInstallPrompt?'Open App':L('installApp')}</button>
     </div></div>`:''}
     <div id="notif-btn-wrap" class="sec" style="${notificationsEnabled()?'display:none':''}"><div class="card-list" style="padding:.7rem">
       <button class="install-btn" style="position:static;transform:none;width:100%;max-width:none;margin:0" onclick="enableNotifications()">${L('turnOnNotifications')}</button>
