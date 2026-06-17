@@ -4,6 +4,24 @@ const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
 const Database = require('better-sqlite3');
+const bcrypt = require('bcryptjs');
+
+// Minimal .env loader (avoids adding a dotenv dependency) — only fills in vars
+// that aren't already set in the real environment.
+(() => {
+  const envPath = path.join(__dirname, ".env");
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+    if (!(key in process.env)) process.env[key] = value;
+  }
+})();
+
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, "vibes.db");
@@ -37,6 +55,16 @@ CREATE TABLE IF NOT EXISTS users (
   bio TEXT DEFAULT '',
   streaks_enabled INTEGER DEFAULT 0,
   hidden_scales TEXT DEFAULT '[]',
+  avatar_color TEXT,
+  plan TEXT DEFAULT 'best',
+  trial_active INTEGER DEFAULT 1,
+  pending_paywall INTEGER DEFAULT 0,
+  ad_age TEXT,
+  ad_birthdate TEXT,
+  ad_gender TEXT,
+  ad_hobbies TEXT,
+  ad_lat TEXT,
+  ad_lon TEXT,
   created_at INTEGER NOT NULL
 );
 
@@ -84,6 +112,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notif_to ON notifications(to_user);
 `);
+try { db.exec(`ALTER TABLE users ADD COLUMN avatar_color TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'best'`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN trial_active INTEGER DEFAULT 1`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN pending_paywall INTEGER DEFAULT 0`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN ad_age TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN ad_birthdate TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN ad_gender TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN ad_hobbies TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN ad_lat TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN ad_lon TEXT`); } catch (e) {}
 // --- Utility Functions ---
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -97,13 +135,28 @@ function prepare(query) {
     return statements.get(query);
 }
 
+function isBcryptHash(s) {
+  return typeof s === "string" && /^\$2[aby]?\$/.test(s);
+}
+
+function verifyPassword(plain, stored, username) {
+  if (isBcryptHash(stored)) return bcrypt.compareSync(plain, stored);
+  // Legacy plaintext password: verify directly, then transparently upgrade to bcrypt.
+  if (stored !== plain) return false;
+  if (username) {
+    const hashed = bcrypt.hashSync(plain, 10);
+    prepare("UPDATE users SET password = ? WHERE username = ?").run(hashed, username);
+  }
+  return true;
+}
+
 function authenticate(req) {
   // Bun used req.headers.get, Express uses req.headers['header-name']
   const u = req.headers['x-username'];
   const p = req.headers['x-password'];
   if (!u || !p) return null;
   const row = prepare("SELECT password FROM users WHERE username = ?").get(u);
-  if (!row || row.password !== p) return null;
+  if (!row || !verifyPassword(p, row.password, u)) return null;
   return u;
 }
 
@@ -113,6 +166,7 @@ function userPublic(u) {
     displayName: u.display_name || "",
     photoDataUrl: u.photo_data_url || null,
     bio: u.bio || "",
+    avatarColor: u.avatar_color || null,
   };
 }
 
@@ -191,8 +245,13 @@ function loadMeState(username) {
     displayName: u.display_name || "",
     photoDataUrl: u.photo_data_url || null,
     bio: u.bio || "",
+    avatarColor: u.avatar_color || null,
     streaksEnabled: !!u.streaks_enabled,
     hiddenScales: JSON.parse(u.hidden_scales || "[]"),
+    plan: u.plan || "best",
+    trialActive: !!u.trial_active,
+    pendingPaywall: !!u.pending_paywall,
+    adProfile: { age: u.ad_age || null, birthdate: u.ad_birthdate || null, gender: u.ad_gender || null, hobbies: u.ad_hobbies || null, lat: u.ad_lat || null, lon: u.ad_lon || null },
     people,
     pendingRequests,
     sentRequests,
@@ -205,33 +264,57 @@ function loadMeState(username) {
   };
 }
 
-const SCALES_FRIEND_DEFAULT = 1;
+// Free-trial-of-Best ends (display-wise) once the user sends their first message or
+// reaches 5 contacts, whichever comes first. We just flag it here — the plan stays
+// "best" (full access continues) until the user actually sees the pricing screen on
+// their next app open and either picks a plan or dismisses (which defaults to Free).
+function maybeFlagTrialEnd(username) {
+  const u = prepare("SELECT plan, trial_active, pending_paywall FROM users WHERE username = ?").get(username);
+  if (!u || !u.trial_active || u.plan !== "best" || u.pending_paywall) return;
+  const messageCount = prepare("SELECT COUNT(*) AS c FROM messages WHERE from_user = ?").get(username).c;
+  const contactCount = prepare("SELECT COUNT(*) AS c FROM people WHERE owner = ?").get(username).c;
+  if (messageCount >= 1 || contactCount >= 5) {
+    prepare("UPDATE users SET pending_paywall = 1 WHERE username = ?").run(username);
+  }
+}
+
+// Creates mutual "people" rows connecting two users as friends, if not already connected.
+// Vibe scores start unrated (NULL) until the user explicitly rates them.
+// Must be called from within an existing db.transaction (better-sqlite3 doesn't support nesting).
+function connectUsersRaw(me, other) {
+  const themUser = prepare("SELECT * FROM users WHERE username = ?").get(other);
+  const myUser = prepare("SELECT * FROM users WHERE username = ?").get(me);
+  if (!themUser || !myUser) throw new Error("User missing");
+
+  const ts = now();
+  const mine = prepare("SELECT * FROM people WHERE owner = ? AND source_username = ?").get(me, other);
+  if (!mine) {
+    prepare("INSERT INTO people (id, owner, name, source_username, friend_index, romantic_index, show_romantic, photo_data_url, created_at) VALUES (?, ?, ?, ?, NULL, NULL, 1, ?, ?)")
+      .run(randomUUID(), me, themUser.display_name || themUser.username, other, themUser.photo_data_url || null, ts);
+  }
+  const theirs = prepare("SELECT * FROM people WHERE owner = ? AND source_username = ?").get(other, me);
+  if (!theirs) {
+    prepare("INSERT INTO people (id, owner, name, source_username, friend_index, romantic_index, show_romantic, photo_data_url, created_at) VALUES (?, ?, ?, ?, NULL, NULL, 1, ?, ?)")
+      .run(randomUUID(), other, myUser.display_name || myUser.username, me, myUser.photo_data_url || null, ts);
+  }
+  maybeFlagTrialEnd(me);
+  maybeFlagTrialEnd(other);
+}
+
+function connectUsers(me, other) {
+  db.transaction(() => connectUsersRaw(me, other))();
+  return { ok: true };
+}
 
 // Transaction-wrapped helper for acceptRequest to ensure atomicity
 function acceptRequestTransaction(me, fromUser) {
   const exists = prepare("SELECT 1 FROM requests WHERE from_user = ? AND to_user = ?").get(fromUser, me);
   if (!exists) throw new Error("No such request");
-  const themUser = prepare("SELECT * FROM users WHERE username = ?").get(fromUser);
-  const myUser = prepare("SELECT * FROM users WHERE username = ?").get(me);
-  if (!themUser || !myUser) throw new Error("User missing");
-
-  // All database operations within this function will be part of a single transaction
   db.transaction(() => {
     prepare("DELETE FROM requests WHERE from_user = ? AND to_user = ?").run(fromUser, me);
     prepare("DELETE FROM requests WHERE from_user = ? AND to_user = ?").run(me, fromUser);
-
-    const ts = now();
-    const mine = prepare("SELECT * FROM people WHERE owner = ? AND source_username = ?").get(me, fromUser);
-    if (!mine) {
-      prepare("INSERT INTO people (id, owner, name, source_username, friend_index, romantic_index, show_romantic, photo_data_url, created_at) VALUES (?, ?, ?, ?, ?, NULL, 1, ?, ?)")
-        .run(randomUUID(), me, themUser.display_name || themUser.username, fromUser, SCALES_FRIEND_DEFAULT, themUser.photo_data_url || null, ts);
-    }
-    const theirs = prepare("SELECT * FROM people WHERE owner = ? AND source_username = ?").get(fromUser, me);
-    if (!theirs) {
-      prepare("INSERT INTO people (id, owner, name, source_username, friend_index, romantic_index, show_romantic, photo_data_url, created_at) VALUES (?, ?, ?, ?, ?, NULL, 1, ?, ?)")
-        .run(randomUUID(), fromUser, myUser.display_name || myUser.username, me, SCALES_FRIEND_DEFAULT, myUser.photo_data_url || null, ts);
-    }
-  }).run(); // This executes the transaction
+    connectUsersRaw(me, fromUser);
+  })();
   return { ok: true };
 }
 
@@ -279,11 +362,66 @@ app.get(['/relations', '/relations/', '/relations/index.html'], (req, res) => {
 });
 
 // Manifest / icon stubs
+const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff375f"/><stop offset=".5" stop-color="#bf5af2"/><stop offset="1" stop-color="#0a84ff"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#000"/><text x="32" y="44" text-anchor="middle" font-size="36" font-weight="800" fill="url(#g)" font-family="-apple-system,Helvetica Neue,sans-serif">V</text></svg>`;
+// Maskable variant: full-bleed background (OS applies its own mask shape) with the
+// glyph sized within the centered ~80% "safe zone" so it survives circular/squircle crops.
+const ICON_SVG_MASKABLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff375f"/><stop offset=".5" stop-color="#bf5af2"/><stop offset="1" stop-color="#0a84ff"/></linearGradient></defs><rect width="64" height="64" fill="#000"/><text x="32" y="41" text-anchor="middle" font-size="26" font-weight="800" fill="url(#g)" font-family="-apple-system,Helvetica Neue,sans-serif">V</text></svg>`;
+
+let sharp = null;
+try { sharp = require('sharp'); } catch (e) {}
+const iconPngCache = new Map();
+async function getIconPng(svg, size) {
+  const key = svg + '|' + size;
+  if (iconPngCache.has(key)) return iconPngCache.get(key);
+  const buf = await sharp(Buffer.from(svg)).resize(size, size).png().toBuffer();
+  iconPngCache.set(key, buf);
+  return buf;
+}
+
 app.get('/vibes/manifest.json', (req, res) => {
-    res.json({ name: "Vibes", short_name: "Vibes", start_url: "/vibes/", display: "standalone", background_color: "#000", theme_color: "#000", icons: [] });
+    res.json({
+      name: "Vibes", short_name: "Vibes", start_url: "/vibes/", scope: "/vibes/", display: "standalone",
+      background_color: "#000", theme_color: "#000",
+      icons: sharp ? [
+        { src: "/vibes/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/vibes/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "/vibes/icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      ] : [
+        { src: "/vibes/icon.svg", sizes: "192x192", type: "image/svg+xml", purpose: "any" },
+        { src: "/vibes/icon.svg", sizes: "512x512", type: "image/svg+xml", purpose: "any" },
+      ],
+    });
 });
 app.get('/vibes/icon.svg', (req, res) => {
-    res.type('image/svg+xml').send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#0a84ff"/><text x="32" y="42" text-anchor="middle" font-size="34" fill="white" font-family="sans-serif">V</text></svg>`);
+    res.type('image/svg+xml').send(ICON_SVG);
+});
+app.get('/vibes/icon-192.png', async (req, res) => {
+  if (!sharp) return res.status(404).end();
+  try { res.type('image/png').send(await getIconPng(ICON_SVG, 192)); }
+  catch (e) { res.status(500).end(); }
+});
+app.get('/vibes/icon-512.png', async (req, res) => {
+  if (!sharp) return res.status(404).end();
+  try { res.type('image/png').send(await getIconPng(ICON_SVG, 512)); }
+  catch (e) { res.status(500).end(); }
+});
+app.get('/vibes/icon-512-maskable.png', async (req, res) => {
+  if (!sharp) return res.status(404).end();
+  try { res.type('image/png').send(await getIconPng(ICON_SVG_MASKABLE, 512)); }
+  catch (e) { res.status(500).end(); }
+});
+
+// Minimal service worker — required for PWA installability (Chrome/Edge won't fire
+// beforeinstallprompt without an active SW with a fetch handler), so without this the
+// browser silently never offers the real one-click install and we always fell back
+// to manual instructions.
+app.get('/vibes/sw.js', (req, res) => {
+  res.type('application/javascript').send(`
+self.addEventListener('install', (e) => self.skipWaiting());
+self.addEventListener('activate', (e) => self.clients.claim());
+self.addEventListener('message', (e) => { if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting(); });
+self.addEventListener('fetch', (e) => {}); // passthrough — presence alone satisfies installability checks
+`.trim());
 });
 
 // Serve other static files (CSS, client-side JS, images, etc.) from the project root
@@ -301,7 +439,8 @@ app.post("/vibes-api/auth/signup", (req, res) => {
     if (String(password).length < 4) return res.status(400).json({ error: "Password too short" });
     const existing = prepare("SELECT 1 FROM users WHERE username = ?").get(uname);
     if (existing) return res.status(400).json({ error: "Username taken" });
-    prepare("INSERT INTO users (username, password, display_name, created_at) VALUES (?, ?, ?, ?)").run(uname, String(password), uname, now());
+    const hashed = bcrypt.hashSync(String(password), 10);
+    prepare("INSERT INTO users (username, password, display_name, created_at) VALUES (?, ?, ?, ?)").run(uname, hashed, uname, now());
     res.json({ username: uname });
   } catch (e) {
     console.error("Error in /vibes-api/auth/signup:", e);
@@ -315,7 +454,7 @@ app.post("/vibes-api/auth/login", (req, res) => {
     if (!username || !password) return res.status(400).json({ error: "Username and password required" });
     const uname = String(username).toLowerCase().trim();
     const row = prepare("SELECT password FROM users WHERE username = ?").get(uname);
-    if (!row || row.password !== String(password)) return res.status(401).json({ error: "Invalid username or password" });
+    if (!row || !verifyPassword(String(password), row.password, uname)) return res.status(401).json({ error: "Invalid username or password" });
     res.json({ username: uname });
   } catch (e) {
     console.error("Error in /vibes-api/auth/login:", e);
@@ -344,7 +483,7 @@ app.delete("/vibes-api/auth/delete", (req, res) => {
       prepare("DELETE FROM requests WHERE from_user = ? OR to_user = ?").run(me, me);
       prepare("DELETE FROM messages WHERE from_user = ? OR to_user = ?").run(me, me);
       prepare("DELETE FROM notifications WHERE to_user = ? OR from_user = ?").run(me, me);
-    }).run();
+    })();
     res.json({ ok: true });
   } catch (e) {
     console.error("Error in /vibes-api/auth/delete:", e);
@@ -373,6 +512,7 @@ app.patch("/vibes-api/me", (req, res) => {
     if ("photoDataUrl" in body) { updates.push("photo_data_url = ?"); params.push(body.photoDataUrl || null); }
     if ("bio" in body) { updates.push("bio = ?"); params.push(String(body.bio || "")); }
     if ("streaksEnabled" in body) { updates.push("streaks_enabled = ?"); params.push(body.streaksEnabled ? 1 : 0); }
+    if ("avatarColor" in body) { updates.push("avatar_color = ?"); params.push(body.avatarColor || null); }
     if ("hiddenScales" in body) { updates.push("hidden_scales = ?"); params.push(JSON.stringify(body.hiddenScales || [])); }
     if (updates.length) {
       params.push(me); // Add 'me' to the end of params for the WHERE clause
@@ -381,6 +521,44 @@ app.patch("/vibes-api/me", (req, res) => {
     res.json(loadMeState(me));
   } catch (e) {
     console.error("Error in /vibes-api/me PATCH:", e);
+    res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
+// PLANS — choosing a plan (or dismissing the paywall, which defaults to Free) always
+// ends the trial. Upgrading is also reachable any time from the Profile page, not just
+// at the paywall.
+const VALID_PLANS = ["free", "plus", "better", "best"];
+app.post("/vibes-api/plan", (req, res) => {
+  try {
+    const me = req.me;
+    const { plan } = req.body;
+    if (!VALID_PLANS.includes(plan)) return res.status(400).json({ error: "Invalid plan" });
+    prepare("UPDATE users SET plan = ?, trial_active = 0, pending_paywall = 0 WHERE username = ?").run(plan, me);
+    res.json(loadMeState(me));
+  } catch (e) {
+    console.error("Error in /vibes-api/plan POST:", e);
+    res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
+app.post("/vibes-api/plan/ad-profile", (req, res) => {
+  try {
+    const me = req.me;
+    const body = req.body;
+    const fieldMap = { age: "ad_age", birthdate: "ad_birthdate", gender: "ad_gender", hobbies: "ad_hobbies", lat: "ad_lat", lon: "ad_lon" };
+    const updates = [];
+    const params = [];
+    for (const [key, col] of Object.entries(fieldMap)) {
+      if (key in body) { updates.push(`${col} = ?`); params.push(body[key] ? String(body[key]) : null); }
+    }
+    if (updates.length) {
+      params.push(me);
+      prepare(`UPDATE users SET ${updates.join(", ")} WHERE username = ?`).run(params);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("Error in /vibes-api/plan/ad-profile POST:", e);
     res.status(500).json({ error: e.message || "Server error" });
   }
 });
@@ -485,6 +663,28 @@ app.post("/vibes-api/requests/cancel", async (req, res) => {
   }
 });
 
+// INVITE LINK — opening someone's invite link instantly connects you as friends.
+app.post("/vibes-api/invite/accept", async (req, res) => {
+  try {
+    const me = req.me;
+    const { fromUsername } = req.body;
+    if (!fromUsername) return res.status(400).json({ error: "fromUsername required" });
+    const from = String(fromUsername).toLowerCase();
+    if (from === me) return res.status(400).json({ error: "Cannot add yourself" });
+    const target = prepare("SELECT 1 FROM users WHERE username = ?").get(from);
+    if (!target) return res.status(404).json({ error: "User not found" });
+    db.transaction(() => {
+      prepare("DELETE FROM requests WHERE from_user = ? AND to_user = ?").run(from, me);
+      prepare("DELETE FROM requests WHERE from_user = ? AND to_user = ?").run(me, from);
+      connectUsersRaw(me, from);
+    })();
+    res.json({ ok: true, fromUsername: from });
+  } catch (e) {
+    console.error("Error in /vibes-api/invite/accept:", e);
+    res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
 // PEOPLE
 app.delete("/vibes-api/people/:id", (req, res) => {
   try {
@@ -579,9 +779,57 @@ app.post("/vibes-api/messages/:peer", async (req, res) => {
     const connected = prepare("SELECT 1 FROM people WHERE owner = ? AND source_username = ?").get(me, peer);
     if (!connected) return res.status(403).json({ error: "Not connected" });
     prepare("INSERT INTO messages (from_user, to_user, body, ts, read) VALUES (?, ?, ?, ?, 0)").run(me, peer, String(body), now());
+    maybeFlagTrialEnd(me);
     res.json({ ok: true });
   } catch (e) {
     console.error(`Error in /vibes-api/messages/${req.params.peer} POST:`, e);
+    res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
+// RIZZ ASSIST — short flirty message suggestions, generated server-side so the
+// LLM API key never reaches the client. Requires GROQ_API_KEY to be set.
+const ROMANTIC_STEPS = ["No Attraction", "Curious", "Talking", "Dating", "Partner", "Soulmate"];
+app.post("/vibes-api/rizz", async (req, res) => {
+  try {
+    const me = req.me;
+    const meUser = prepare("SELECT plan FROM users WHERE username = ?").get(me);
+    if (!meUser || (meUser.plan !== "best" && meUser.plan !== "plus")) return res.status(403).json({ error: "Rizz Assist is a Plus or Best plan feature", upgradeRequired: true });
+    const { peerUsername } = req.body;
+    if (!peerUsername) return res.status(400).json({ error: "peerUsername required" });
+    const peer = String(peerUsername).toLowerCase();
+    const connected = prepare("SELECT 1 FROM people WHERE owner = ? AND source_username = ?").get(me, peer);
+    if (!connected) return res.status(403).json({ error: "Not connected" });
+    if (!process.env.GROQ_API_KEY) return res.status(503).json({ error: "Rizz assist isn't configured on this server" });
+
+    const peerUser = prepare("SELECT * FROM users WHERE username = ?").get(peer);
+    const peerName = peerUser ? (peerUser.display_name || peerUser.username) : peer;
+    const person = loadPeopleForUser(me).find((p) => p.sourceUsername === peer);
+    const vibeLabel = person && person.effectiveRomanticIndex != null ? ROMANTIC_STEPS[person.effectiveRomanticIndex] : "Curious";
+
+    const rows = prepare("SELECT * FROM messages WHERE (from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?) ORDER BY ts DESC LIMIT 10").all(me, peer, peer, me);
+    const recent = rows.reverse().filter((m) => !m.body.startsWith("data:image/"));
+    const history = recent.map((m) => `${m.from_user === me ? "Me" : peerName}: ${m.body}`).join("\n");
+
+    const prompt = `You are helping someone flirt. Their romantic Vibe Score with ${peerName} is "${vibeLabel}". Give 3 short, witty, natural message suggestions they could send next. Keep each under 12 words. No quotes, no numbering, just one per line. Recent chat:\n${history || "(no messages yet)"}`;
+
+    const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        max_tokens: 200,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!groqRes.ok) throw new Error(`Groq API error: ${groqRes.status}`);
+    const data = await groqRes.json();
+    const text = data?.choices?.[0]?.message?.content || "";
+    const suggestions = text.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 3);
+    if (!suggestions.length) throw new Error("No suggestions returned");
+    res.json({ suggestions });
+  } catch (e) {
+    console.error("Error in /vibes-api/rizz:", e);
     res.status(500).json({ error: e.message || "Server error" });
   }
 });

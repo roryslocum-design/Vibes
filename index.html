@@ -9,6 +9,8 @@
   <meta name="theme-color" content="#000000">
   <link rel="manifest" href="/vibes/manifest.json">
   <link rel="apple-touch-icon" href="/vibes/icon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="/vibes/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/vibes/icon-512.png">
   <title>Vibes</title>
   <style>
     :root {
@@ -34,6 +36,25 @@
     @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
     .auth-switch{color:var(--blue);text-align:center;font-size:.88rem;cursor:pointer;padding:.5rem;}
 
+    /* LANGUAGE PICKER */
+    .lang-picker{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-bottom:1.2rem;direction:ltr;}
+    .lang-btn{background:rgba(255,255,255,.08);border:1px solid transparent;color:rgba(255,255,255,.6);font-size:.78rem;font-weight:600;font-family:inherit;padding:.3rem .65rem;border-radius:20px;cursor:pointer;}
+    .lang-btn.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+    .lang-btn:active{opacity:.7;}
+
+    /* INSTALL BUTTON */
+    .install-btn{position:fixed;left:50%;bottom:calc(1.5rem + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:calc(100% - 4rem);max-width:340px;display:flex;align-items:center;justify-content:center;gap:.5rem;background:var(--s1);border:1px solid var(--sep);border-radius:14px;padding:.85rem;color:var(--text);font-size:.9rem;font-weight:600;font-family:inherit;cursor:pointer;z-index:101;}
+    .install-btn:active{opacity:.8;}
+    #install-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;align-items:center;justify-content:center;padding:1.5rem;}
+    #install-modal.show{display:flex;}
+    .install-modal-card{background:#111;border-radius:18px;width:100%;max-width:360px;padding:1.5rem;position:relative;}
+    .install-modal-title{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:.9rem;}
+    .install-modal-tabs{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem;}
+    .install-modal-tab{background:rgba(255,255,255,.08);border:1px solid transparent;color:rgba(255,255,255,.65);font-size:.76rem;font-weight:600;font-family:inherit;padding:.35rem .7rem;border-radius:20px;cursor:pointer;}
+    .install-modal-tab.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+    .install-modal-steps{color:rgba(255,255,255,.8);font-size:.9rem;line-height:1.9;padding-left:1.2rem;}
+    .install-modal-close{margin-top:1.2rem;width:100%;padding:.8rem;border-radius:12px;border:none;background:#fff;color:#000;font-size:.95rem;font-weight:600;cursor:pointer;font-family:inherit;}
+
     /* APP */
     #app{display:none;flex-direction:column;height:100vh;height:100dvh;}
     #app.show{display:flex;}
@@ -53,7 +74,7 @@
     .pane{display:none;height:100%;overflow-y:auto;padding:.5rem 0 1rem;}
     .pane.show{display:block;}
 
-    .tab-bar{display:flex;justify-content:center;background:#1c1c1e;border-top:.5px solid var(--sep);padding-bottom:env(safe-area-inset-bottom,0px);flex-shrink:0;position:relative;z-index:11;}
+    .tab-bar{display:flex;justify-content:center;background:#1c1c1e;border-top:.5px solid var(--sep);padding-bottom:env(safe-area-inset-bottom,0px);flex-shrink:0;position:relative;z-index:11;direction:ltr;}
     /* App mode: fixed fill covers the gap below the viewport */
     html.app-mode .tab-bar{padding-bottom:34px;}
     html.app-mode .tab-bar::after{content:'';position:fixed;bottom:0;left:0;right:0;height:34px;background:#1c1c1e;z-index:10;pointer-events:none;}
@@ -99,11 +120,27 @@
     .sheet-input{width:100%;padding:.85rem 1rem;border-radius:12px;border:1px solid var(--sep);background:var(--s2);color:var(--text);font-size:1rem;font-family:inherit;outline:none;margin-bottom:.7rem;}
     .sheet-input:focus{border-color:var(--blue);}
     .sheet-input::placeholder{color:var(--muted);}
+    #adprof-sh .sheet-input{padding-left:.6rem;}
+    #adprof-sh select.sheet-input{-webkit-appearance:none;appearance:none;padding-right:2.4rem;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 1.4rem center;}
     .sheet-btn{width:100%;padding:.9rem;border-radius:14px;border:none;font-size:1rem;font-weight:600;font-family:inherit;cursor:pointer;margin-top:.4rem;}
     .sheet-btn:active{opacity:.8;}
     .btn-primary{background:var(--blue);color:#fff;}
     .btn-danger{background:rgba(255,69,58,.14);color:var(--red);}
     .btn-ghost{background:var(--s2);color:var(--text);}
+
+    /* PLANS */
+    .plan-card{border:1px solid var(--sep);border-radius:16px;padding:1rem 1.1rem;margin-bottom:.8rem;}
+    .plan-card.current{border-color:var(--blue);background:rgba(10,132,255,.08);}
+    .plan-card-hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.15rem;}
+    .plan-card-name{font-size:1.05rem;font-weight:700;}
+    .plan-card-price{font-size:.82rem;color:var(--muted);font-weight:600;}
+    .plan-card-tag{font-size:.8rem;color:var(--muted);margin-bottom:.6rem;}
+    .plan-card-feats{list-style:none;margin:0 0 .8rem;padding:0;font-size:.85rem;color:var(--text2);line-height:1.7;}
+    .plan-card-feats li{padding-left:1.3rem;position:relative;}
+    .plan-card-feats li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:700;}
+    .plan-card-btn{width:100%;padding:.7rem;border-radius:12px;border:none;background:var(--blue);color:#fff;font-size:.92rem;font-weight:700;font-family:inherit;cursor:pointer;}
+    .plan-card-btn:disabled{background:var(--s3);color:var(--muted);cursor:default;}
+    .ad-placeholder{margin:0 1rem .8rem;padding:.9rem 1rem;border-radius:14px;border:1px dashed var(--sep);background:var(--s1);color:var(--muted);font-size:.8rem;text-align:center;letter-spacing:.02em;}
 
     /* SEGMENTED */
     .seg{display:flex;background:var(--s2);border-radius:10px;padding:.25rem;margin-bottom:1rem;}
@@ -245,6 +282,9 @@
     .ob-title{font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:.75rem;}
     .ob-body{font-size:.92rem;line-height:1.65;color:rgba(255,255,255,.72);}
     .ob-detail{margin-top:1rem;padding:.6rem 1rem;background:rgba(255,255,255,.07);border-radius:10px;font-size:.8rem;color:rgba(255,255,255,.4);line-height:1.6;}
+    .ob-steps{list-style:none;text-align:left;width:100%;margin:0;padding:0;}
+    .ob-steps li{font-size:.88rem;line-height:1.5;color:rgba(255,255,255,.72);margin-bottom:.85rem;}
+    .ob-steps li:last-child{margin-bottom:0;}
     .ob-footer{padding:1rem 1.5rem 1.5rem;display:flex;flex-direction:column;align-items:center;gap:.75rem;flex-shrink:0;}
     .ob-btns{display:flex;gap:.75rem;width:100%;}
     .ob-btn{flex:1;padding:.85rem;border-radius:14px;border:none;background:#fff;color:#000;font-size:.97rem;font-weight:600;cursor:pointer;font-family:inherit;}
@@ -270,16 +310,34 @@
 <div id="auth">
   <div class="auth-title">Vibes</div>
   <div class="auth-sub" id="auth-sub">Define your relationships without the stress</div>
+  <div class="lang-picker" id="lang-picker">
+    <button class="lang-btn on" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('zh')">中文</button>
+    <button class="lang-btn" onclick="setLang('hi')">हिंदी</button>
+    <button class="lang-btn" onclick="setLang('es')">ES</button>
+    <button class="lang-btn" onclick="setLang('ar')">عربي</button>
+  </div>
   <form class="auth-form" onsubmit="return false">
     <input class="auth-input" id="au" type="text" placeholder="Username" autocomplete="username" autocapitalize="none" spellcheck="false"/>
     <input class="auth-input" id="ap" type="password" placeholder="Password" autocomplete="current-password"/>
     <div class="auth-err" id="aerr"></div>
     <button class="auth-btn" id="asub" onclick="authGo()">Sign In</button>
     <div style="text-align:center;padding:.5rem 0 0">
-      <span style="color:var(--blue);font-size:.88rem;font-weight:600;cursor:pointer" onclick="obOpen()">Learn More</span>
+      <span style="color:var(--blue);font-size:.88rem;font-weight:600;cursor:pointer" onclick="obOpen()" id="learn-more-btn">Learn More</span>
     </div>
     <div class="auth-switch" id="aswitch" onclick="toggleMode()">Don't have an account? <b>Sign Up</b></div>
   </form>
+  <button class="install-btn" id="install-banner" style="display:none" onclick="handleInstallClick()">Install as App</button>
+</div>
+
+<!-- INSTALL INSTRUCTIONS MODAL -->
+<div id="install-modal" onclick="if(event.target===this)closeInstallModal()">
+  <div class="install-modal-card">
+    <div class="install-modal-title" id="install-modal-title">Install Vibes</div>
+    <div class="install-modal-tabs" id="install-modal-tabs"></div>
+    <ol class="install-modal-steps" id="install-modal-steps"></ol>
+    <button class="install-modal-close" onclick="closeInstallModal()">Got it</button>
+  </div>
 </div>
 
 <!-- ONBOARDING MODAL -->
@@ -287,50 +345,7 @@
   <div id="ob-sheet">
     <div class="ob-handle"></div>
     <div class="ob-pages" id="ob-pages">
-    <div class="ob-slider" id="ob-slider">
-      <div class="ob-page">
-        <div class="ob-emoji">✨</div>
-        <div class="ob-title">Welcome to Vibes</div>
-        <div class="ob-body">A private space to track where your friendships and connections actually stand. Only you see your ratings — nothing is shared.</div>
-      </div>
-      <div class="ob-page">
-        <div class="ob-emoji">👋</div>
-        <div class="ob-title">Rate your friendships</div>
-        <div class="ob-body">Everyone in your life sits somewhere on the scale. Tap a dot to mark where they're at, and update it whenever the vibe shifts.</div>
-        <div class="ob-detail">Acquaintance · Friend · Good Friend · Best Friend · Ride or Die</div>
-      </div>
-      <div class="ob-page">
-        <div class="ob-emoji">💕</div>
-        <div class="ob-title">Track romantic vibes too</div>
-        <div class="ob-body">If there's romantic energy, you can add that scale as well. It only shows when you choose to turn it on.</div>
-        <div class="ob-detail">Curious · Crush · Talking · Dating · Partner · Soulmate</div>
-      </div>
-      <div class="ob-page">
-        <div class="ob-emoji">✨</div>
-        <div class="ob-title">Rizz assist</div>
-        <div class="ob-body">Once someone's romantic vibe reaches Curious or higher, a ✨ button appears in your chat with them. Tap it and the app will suggest something to say — a little AI help when you're not sure how to move things forward.</div>
-      </div>
-      <div class="ob-page">
-        <div class="ob-emoji">🔒</div>
-        <div class="ob-title">When things get serious</div>
-        <div class="ob-body">Once your Vibe Score with someone hits Dating or higher, your romantic scale gets locked for everyone else — and at the same time, anyone viewing your profile sees that you're in a relationship. The app recognises you're in something and takes you off the table. No action needed — it happens automatically.</div>
-      </div>
-      <div class="ob-page">
-        <div class="ob-emoji">📈</div>
-        <div class="ob-title">How the Vibe Score works</div>
-        <div class="ob-body">Rate people where you want the relationship to go, not just where it is right now. Your rating is always private. You only see a Vibe Score with someone once you've rated them too — then it shows up as the lower of the two ratings. Your higher rating stays yours. Use it as an intention, not a verdict.</div>
-      </div>
-      <div class="ob-page">
-        <div class="ob-emoji">💫</div>
-        <div class="ob-title">A use case</div>
-        <div class="ob-body">Sam and Alex secretly like each other. Sam, ready to date, marks their vibe at Dating. Alex, wanting to take things a bit slower, marks Talking. They would have never known they liked each other — but now they're talking.</div>
-      </div>
-      <div class="ob-page">
-        <div class="ob-emoji">🙌</div>
-        <div class="ob-title">No pressure, no labels</div>
-        <div class="ob-body">Vibes isn't here to define anyone or create pressure around where things stand. Scores are private — no one else sees them. Don't let the numbers box anyone in. The app works for you, not the other way around.</div>
-      </div>
-    </div>
+    <div class="ob-slider" id="ob-slider"></div>
     </div>
     <div class="ob-footer">
       <div class="ob-dots" id="ob-dots"></div>
@@ -357,8 +372,8 @@
     </div>
   </div>
   <div class="people-search-wrap" id="people-search-wrap">
-    <input class="people-search" id="people-search" type="text" placeholder="Search people…" autocomplete="off" oninput="renderPeople()" onblur="this.value='';renderPeople()"/>
-    <div style="font-size:.82rem;color:var(--muted);padding:.4rem 0 0;text-align:center;width:100%;">Feedback for the app? Message Rory</div>
+    <input class="people-search" id="people-search" type="text" placeholder="Search added people…" autocomplete="off" oninput="renderPeople()" onblur="this.value='';renderPeople()"/>
+    <div id="feedback-msg" style="font-size:.82rem;color:var(--muted);padding:.4rem 0 0;text-align:center;width:100%;">Feedback for the app? Message Rory</div>
   </div>
   <div class="content">
     <div class="pane show" id="pane-people"><div id="people-body"></div></div>
@@ -367,9 +382,9 @@
   </div>
   <div style="position:fixed;bottom:0;left:0;right:0;height:60px;background:#1c1c1e;z-index:9;pointer-events:none;"></div>
   <div class="tab-bar">
-    <button class="tab on" id="tab-people" onclick="goTab('people',this)"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div><div class="tab-lbl">People</div></button>
-    <button class="tab" id="tab-messages" onclick="goTab('messages',this)" style="position:relative"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div><div class="tab-lbl">Messages</div><div id="msg-tab-badge" style="display:none" class="tab-badge"></div></button>
-    <button class="tab" id="tab-settings" onclick="goTab('settings',this)"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div><div class="tab-lbl">Profile</div></button>
+    <button class="tab on" id="tab-people" onclick="goTab('people',this)"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div><div class="tab-lbl" id="tab-lbl-people">People</div></button>
+    <button class="tab" id="tab-messages" onclick="goTab('messages',this)" style="position:relative"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div><div class="tab-lbl" id="tab-lbl-messages">Messages</div><div id="msg-tab-badge" style="display:none" class="tab-badge"></div></button>
+    <button class="tab" id="tab-settings" onclick="goTab('settings',this)"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div><div class="tab-lbl" id="tab-lbl-profile">Profile</div></button>
   </div>
 </div>
 
@@ -378,7 +393,7 @@
   <div class="chat-nav">
     <button class="chat-back" onclick="closeChat()">
       <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M9 1L1 8l8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Back
+      <span id="chat-back-lbl">Back</span>
     </button>
     <div style="flex:1;min-width:0">
       <div class="chat-peer-name" id="chat-peer-name"></div>
@@ -394,7 +409,7 @@
     </button>
     <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="sendChatImage(this)"/>
     <button class="rizz-btn" id="rizz-btn" style="display:none" onclick="getRizzSuggestion()" title="Rizz suggestion">✨</button>
-    <textarea class="chat-input" id="chat-input" placeholder="Message…" rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
+    <textarea class="chat-input" id="chat-input" placeholder="Message…" data-i18n-ph="messagePlaceholder" rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
     <button class="chat-send" id="chat-send-btn" onclick="sendChatMessage()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
@@ -405,19 +420,20 @@
 <div class="overlay" id="add-ov" onclick="closeSheet('add')"></div>
 <div class="sheet" id="add-sh">
   <div class="handle"></div>
-  <div class="sheet-title">Add Person</div>
-  <input class="sheet-input" id="search-input" type="text" placeholder="Search by username…" autocomplete="off" autocapitalize="none" oninput="renderSearch()"/>
+  <div class="sheet-title" id="add-sh-title">Add Person</div>
+  <input class="sheet-input" id="search-input" type="text" placeholder="Search by username…" data-i18n-ph="searchByUsername" autocomplete="off" autocapitalize="none" oninput="renderSearch()"/>
   <button id="contacts-btn" class="sheet-btn btn-ghost" style="display:none;margin-bottom:.5rem" onclick="findFromContacts()">Find from Contacts</button>
+  <button class="sheet-btn btn-ghost" id="share-link-btn" style="margin-bottom:.5rem" onclick="shareInviteLink()">🔗 Share Invite Link</button>
   <div class="search-results card-list" id="search-results" style="margin-bottom:.5rem"></div>
-  <button class="sheet-btn btn-ghost" onclick="closeSheet('add')">Cancel</button>
+  <button class="sheet-btn btn-ghost" id="add-cancel-btn" onclick="closeSheet('add')">Cancel</button>
 </div>
 
 <!-- NEW MESSAGE SHEET -->
 <div class="overlay" id="newmsg-ov" onclick="closeSheet('newmsg')"></div>
 <div class="sheet" id="newmsg-sh" style="display:flex;flex-direction:column;height:60vh;max-height:80vh;overflow:hidden;">
   <div class="handle"></div>
-  <div class="sheet-title">New Message</div>
-  <input class="sheet-input" id="newmsg-search" type="text" placeholder="Search people…" autocomplete="off" oninput="renderNewMsgList()" style="flex-shrink:0"/>
+  <div class="sheet-title" id="newmsg-sh-title">New Message</div>
+  <input class="sheet-input" id="newmsg-search" type="text" placeholder="Search people…" data-i18n-ph="searchPeopleMsg" autocomplete="off" oninput="renderNewMsgList()" style="flex-shrink:0"/>
   <div id="newmsg-list" style="overflow-y:auto;flex:1;"></div>
 </div>
 
@@ -431,41 +447,62 @@
     </div>
     <div style="flex:1;padding-top:.3rem">
       <div class="det-name" id="det-name" style="text-align:left;margin-bottom:.3rem"></div>
-      <div id="det-bio" style="font-size:.82rem;color:var(--muted);line-height:1.5;display:none"></div>
     </div>
   </div>
   <div id="det-scales"></div>
+  <div id="det-ad"></div>
   <button class="sheet-btn btn-danger" id="det-del">Remove Person</button>
-  <button class="sheet-btn btn-ghost" onclick="closeSheet('det')">Done</button>
+  <button class="sheet-btn btn-ghost" id="det-done-btn" onclick="closeSheet('det')">Done</button>
 </div>
 
 <!-- PROFILE SHEET -->
 <div class="overlay" id="prof-ov" onclick="closeSheet('prof')"></div>
 <div class="sheet" id="prof-sh">
   <div class="handle"></div>
-  <div class="sheet-title">Edit Profile</div>
+  <div class="sheet-title" id="prof-sh-title">Edit Profile</div>
   <div class="prof-edit-av" id="prof-edit-av" onclick="document.getElementById('photo-input').click()"></div>
-  <div class="change-photo-lbl" onclick="document.getElementById('photo-input').click()">Change Photo</div>
+  <div class="change-photo-lbl" id="change-photo-lbl" onclick="document.getElementById('photo-input').click()">Change Photo</div>
   <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)"/>
-  <div class="field-lbl">Display Name</div>
-  <input class="sheet-input" id="prof-displayname" type="text" placeholder="Display name" maxlength="30"/>
-  <div style="font-size:.78rem;color:var(--muted);padding:0 .2rem .8rem">Username: <span id="prof-username-lbl" style="color:var(--text2)"></span></div>
-  <div class="field-lbl">Bio</div>
-  <textarea class="sheet-input" id="prof-bio" placeholder="Say something about yourself…" maxlength="160" rows="3" style="resize:none;line-height:1.5"></textarea>
-  <div style="font-size:.72rem;color:var(--muted);text-align:right;padding:0 .2rem .6rem" id="prof-bio-count">0 / 160</div>
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .2rem .9rem">
-    <div>
-      <div style="font-size:.95rem;font-weight:600;color:var(--text)">🔥 Streaks</div>
-      <div style="font-size:.75rem;color:var(--muted);margin-top:.15rem">Keep a streak by both messaging every day</div>
-    </div>
-    <label style="position:relative;display:inline-block;width:48px;height:28px;flex-shrink:0">
-      <input type="checkbox" id="prof-streaks" style="opacity:0;width:0;height:0" onchange="updateStreaksToggle(this.checked)">
-      <span id="prof-streaks-track" style="position:absolute;inset:0;border-radius:14px;background:var(--s3);transition:background .2s;cursor:pointer"></span>
-      <span id="prof-streaks-thumb" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none"></span>
-    </label>
-  </div>
-  <button class="sheet-btn btn-primary" onclick="saveProfile()">Save</button>
-  <button class="sheet-btn btn-ghost" onclick="closeSheet('prof')">Cancel</button>
+  <div class="field-lbl" id="display-name-lbl">Display Name</div>
+  <input class="sheet-input" id="prof-displayname" type="text" placeholder="Display name" data-i18n-ph="displayNamePh" maxlength="30"/>
+  <div style="font-size:.78rem;color:var(--muted);padding:0 .2rem .8rem"><span id="username-label-txt">Username:</span> <span id="prof-username-lbl" style="color:var(--text2)"></span></div>
+  <div class="field-lbl" id="icon-color-lbl">Icon Color</div>
+  <div id="prof-color-picker" style="display:flex;gap:.55rem;padding:.2rem .2rem 1rem;flex-wrap:wrap"></div>
+  <button class="sheet-btn btn-primary" id="prof-save-btn" onclick="saveProfile()">Save</button>
+  <button class="sheet-btn btn-ghost" id="prof-cancel-btn" onclick="closeSheet('prof')">Cancel</button>
+</div>
+
+<!-- PLANS / PAYWALL -->
+<div class="overlay" id="plan-ov" onclick="closePaywallOverlay()"></div>
+<div class="sheet" id="plan-sh" style="max-height:85vh;overflow-y:auto">
+  <div class="handle"></div>
+  <div class="sheet-title" id="plan-sheet-title">Choose Your Plan</div>
+  <div id="plan-cards"></div>
+</div>
+
+<!-- AD CUSTOMIZATION (Free / Plus plans) -->
+<div class="overlay" id="adprof-ov"></div>
+<div class="sheet" id="adprof-sh">
+  <div class="handle" style="opacity:.3"></div>
+  <div class="sheet-title" id="adprof-sh-title">Help Us Show Better Ads</div>
+  <div id="adprof-sh-sub" style="font-size:.82rem;color:var(--muted);text-align:center;margin:-.6rem 0 1rem">All fields are required so the ads you see stay relevant. You can update these anytime from your Profile.</div>
+  <div class="field-lbl" id="adprof-dob-lbl">Date of Birth</div>
+  <input class="sheet-input" id="adprof-birthdate" type="date"/>
+  <div class="field-lbl" id="adprof-gender-lbl">Gender</div>
+  <select class="sheet-input" id="adprof-gender">
+    <option value="" disabled selected id="adprof-gender-sel">Select…</option>
+    <option value="prefer_not_to_say" id="adprof-gender-none">Prefer not to say</option>
+    <option value="female" id="adprof-gender-f">Female</option>
+    <option value="male" id="adprof-gender-m">Male</option>
+    <option value="nonbinary" id="adprof-gender-nb">Non-binary</option>
+    <option value="other" id="adprof-gender-o">Other</option>
+  </select>
+  <div class="field-lbl" id="adprof-hobbies-lbl">Hobbies</div>
+  <input class="sheet-input" id="adprof-hobbies" type="text" placeholder="e.g. hiking, gaming, cooking" data-i18n-ph="hobbiesPh"/>
+  <div class="field-lbl" id="adprof-location-lbl">Location</div>
+  <div id="adprof-location-status" style="font-size:.82rem;color:var(--muted);text-align:center;padding:.2rem 0 .6rem">📍 Your device will ask to confirm location access</div>
+  <div id="adprof-error" style="font-size:.8rem;color:var(--red);text-align:center;min-height:1.1em;padding-top:.4rem"></div>
+  <button class="sheet-btn btn-primary" id="adprof-save-btn" onclick="saveAdProfile()">Save</button>
 </div>
 
 <script>
@@ -475,6 +512,131 @@
     document.documentElement.classList.add('app-mode');
   }
 })();
+
+// ── Install button ───────────────────────────────────────────────────────────
+let _deferredInstallPrompt=null;
+function isStandalone(){return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;}
+function getPlatform(){
+  const ua=navigator.userAgent||'';
+  const isIOS=/iPad|iPhone|iPod/.test(ua)&&!window.MSStream;
+  const isAndroid=/Android/.test(ua);
+  const isEdge=/Edg\//.test(ua);
+  const isSamsung=/SamsungBrowser/.test(ua);
+  const isFirefox=/Firefox|FxiOS/.test(ua);
+  const isChrome=/Chrome|CriOS/.test(ua)&&!isEdge&&!isSamsung;
+  const isSafari=/Safari/.test(ua)&&!isChrome&&!isEdge&&!isFirefox&&!isSamsung;
+
+  if(isIOS)return isSafari?'ios-safari':'ios-other';
+  if(isAndroid)return (isChrome||isSamsung)?'android-chrome':'android-other';
+  if(isEdge)return 'desktop-edge';
+  if(isChrome)return 'desktop-chrome';
+  if(isFirefox)return 'desktop-firefox';
+  if(isSafari)return 'desktop-safari';
+  return 'other';
+}
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  _deferredInstallPrompt=e;
+  maybeShowInstallButton();
+});
+window.addEventListener('appinstalled',()=>{
+  _deferredInstallPrompt=null;
+  hideInstallButton();
+});
+let _installAvailable=false;
+function isSettingsTabActive(){return document.getElementById('tab-settings')?.classList.contains('on');}
+function maybeShowInstallButton(){
+  if(isStandalone())return;
+  _installAvailable=true;
+  document.getElementById('install-banner').style.display='flex';
+  if(isSettingsTabActive()) renderSettings();
+}
+function hideInstallButton(){
+  _installAvailable=false;
+  document.getElementById('install-banner').style.display='none';
+  if(isSettingsTabActive()) renderSettings();
+}
+async function handleInstallClick(){
+  if(_deferredInstallPrompt){
+    try{await _deferredInstallPrompt.prompt();await _deferredInstallPrompt.userChoice;}catch(e){}
+    _deferredInstallPrompt=null;
+    hideInstallButton();
+    return;
+  }
+  showInstallModal(getPlatform());
+}
+const INSTALL_STEPS={
+  'ios-safari':[
+    'Tap the <b>Share</b> icon (the square with an arrow pointing up) in Safari\'s toolbar.',
+    'Scroll down the share menu and tap <b>Add to Home Screen</b>.',
+    'Edit the name if you\'d like, then tap <b>Add</b> in the top-right corner.',
+    'Vibes now appears on your Home Screen and opens full-screen, just like a regular app.'
+  ],
+  'ios-other':[
+    'iOS only allows installing apps from <b>Safari</b> — not from this browser.',
+    'Tap the <b>···</b> or share icon and choose <b>Open in Safari</b> (or copy the link and paste it into Safari).',
+    'In Safari, tap the <b>Share</b> icon, scroll down, and tap <b>Add to Home Screen</b>.',
+    'Tap <b>Add</b> in the top-right corner to finish.'
+  ],
+  'android-chrome':[
+    'Tap the <b>⋮</b> menu in the top-right corner of Chrome.',
+    'Tap <b>Install app</b> (older versions show <b>Add to Home screen</b>).',
+    'Confirm by tapping <b>Install</b> in the popup that appears.',
+    'Vibes is added to your Home screen and app drawer, and opens in its own window.'
+  ],
+  'android-other':[
+    'Tap the menu button (<b>⋮</b> or <b>≡</b>) in your browser.',
+    'Look for <b>Add to Home screen</b> or <b>Install</b> in the menu.',
+    'Confirm the prompt — Vibes is added to your Home screen.',
+    'If you don\'t see that option, try opening this page in Chrome instead.'
+  ],
+  'desktop-chrome':[
+    'Look at the right side of the address bar for the install icon (a small monitor with a ↓ arrow).',
+    'Click it, then click <b>Install</b> in the popup that appears.',
+    'If you don\'t see the icon, click the <b>⋮</b> menu → <b>Save and share</b> → <b>Install Vibes…</b>.',
+    'Vibes opens in its own window and is added to your Applications/Start Menu.'
+  ],
+  'desktop-edge':[
+    'Click the <b>···</b> menu in the top-right corner of Edge.',
+    'Hover over <b>Apps</b>, then click <b>Install this site as an app</b>.',
+    'Click <b>Install</b> in the dialog that appears.',
+    'Vibes opens in its own window and is added to your Start Menu.'
+  ],
+  'desktop-safari':[
+    'Safari on Mac doesn\'t support one-click installing — but you can still pin it.',
+    'On macOS Sonoma or later: open the <b>File</b> menu and choose <b>Add to Dock…</b>.',
+    'On older macOS: open the <b>Share</b> menu and choose <b>Add to Reading List</b> or simply bookmark the page (<b>⌘D</b>) for quick access.',
+    'For the full app experience, try opening this page in Chrome or Edge instead.'
+  ],
+  'desktop-firefox':[
+    'Firefox on desktop doesn\'t support installing this as an app.',
+    'Bookmark this page with <b>Ctrl/⌘+D</b> for quick access instead.',
+    'For the full app experience — its own window, no browser bar — open this page in Chrome or Edge and install it from there.'
+  ],
+  other:['Use your browser\'s menu to find <b>Install</b> or <b>Add to Home Screen</b>.']
+};
+const INSTALL_METHOD_LABELS={
+  'ios-safari':'iOS · Safari','ios-other':'iOS · Other',
+  'android-chrome':'Android · Chrome','android-other':'Android · Other',
+  'desktop-chrome':'Desktop · Chrome','desktop-edge':'Desktop · Edge',
+  'desktop-safari':'Desktop · Safari','desktop-firefox':'Desktop · Firefox',
+  other:'Other'
+};
+function renderInstallSteps(plat){
+  document.getElementById('install-modal-steps').innerHTML=INSTALL_STEPS[plat].map(s=>`<li>${s}</li>`).join('');
+  document.getElementById('install-modal-tabs').querySelectorAll('.install-modal-tab').forEach(t=>{
+    t.classList.toggle('on',t.dataset.plat===plat);
+  });
+}
+function showInstallModal(plat){
+  document.getElementById('install-modal-tabs').innerHTML=Object.keys(INSTALL_METHOD_LABELS).map(k=>
+    `<button type="button" class="install-modal-tab" data-plat="${k}" onclick="renderInstallSteps('${k}')">${INSTALL_METHOD_LABELS[k]}</button>`
+  ).join('');
+  renderInstallSteps(plat);
+  document.getElementById('install-modal').classList.add('show');
+}
+function closeInstallModal(){document.getElementById('install-modal').classList.remove('show');}
+maybeShowInstallButton();
 
 // ── Scales ────────────────────────────────────────────────────────────────────
 const API='/vibes-api';
@@ -487,9 +649,72 @@ const SCALES = {
     clrs: ['#6b6b80','#ff9f0a','#ff6b9d','#ff375f','#d63060','#a01040','#bf5af2'] }
 };
 
+// ── Plans ─────────────────────────────────────────────────────────────────────
+const PLAN_INFO={
+  free:{name:'Free',emoji:'🆓'},
+  plus:{name:'Plus',emoji:'💬'},
+  better:{name:'Better',emoji:'✨'},
+  best:{name:'Best',emoji:'⭐'}
+};
+const PLANS=[
+  {key:'free',name:'Free',price:'Pricing TBA',tagline:'Get started at no cost',features:['Track unlimited friendships','Rate vibes for friends & romantic interests','Shows ads','Helps us tailor ads to you (age, gender, hobbies)']},
+  {key:'plus',name:'Plus',price:'Pricing TBA',tagline:'Rizz Assist for less, ads included',features:['Everything in Free','✨ Rizz Assist — AI message suggestions','Shows ads','Cheaper than Best since ads help cover the cost']},
+  {key:'better',name:'Better',price:'Pricing TBA',tagline:'No ads, same great experience',features:['Everything in Free','No ads, ever','No ad-targeting questions']},
+  {key:'best',name:'Best',price:'Pricing TBA',tagline:'The full experience',features:['Everything in Better','✨ Rizz Assist — AI message suggestions','No ads, ever']}
+];
+function planHasAds(plan){return plan==='free'||plan==='plus';}
+
+// Contextual placeholder ad copy — varies by the relationship with a specific
+// person, the viewer's own (self-reported) age/gender, and the date. Never reads
+// message content, never reads another user's private ad profile.
+const ROMANTIC_DATING_IDX=3; // 'Dating' in romanticSteps
+function isValentinesDay(){const d=new Date();return d.getMonth()===1&&d.getDate()===14;}
+function getAgeFromBirthdate(birthdate){
+  if(!birthdate) return NaN;
+  const bd=new Date(birthdate);
+  if(Number.isNaN(bd.getTime())) return NaN;
+  const today=new Date();
+  let age=today.getFullYear()-bd.getFullYear();
+  const hasHadBirthdayThisYear=(today.getMonth()>bd.getMonth())||(today.getMonth()===bd.getMonth()&&today.getDate()>=bd.getDate());
+  if(!hasHadBirthdayThisYear) age--;
+  return age;
+}
+function getAdContext(person){
+  if(!person) return null;
+  const prof=_state.adProfile||{};
+  const age=getAgeFromBirthdate(prof.birthdate);
+  const gender=(prof.gender||'').toLowerCase();
+  const romanticIdx=person.effectiveRomanticIndex;
+  const friendIdx=person.effectiveFriendIndex;
+  if(isValentinesDay()&&romanticIdx!=null&&romanticIdx>=ROMANTIC_DATING_IDX){
+    if(gender==='male') return {emoji:'🌹',text:"Ad · Surprise her with roses this Valentine's Day"};
+    if(gender==='female') return {emoji:'🌹',text:"Ad · Surprise him with roses this Valentine's Day"};
+    return {emoji:'🌹',text:"Ad · Roses, delivered today for Valentine's Day"};
+  }
+  if(!Number.isNaN(age)&&age<18&&friendIdx!=null&&friendIdx>=3){
+    return {emoji:'🚗',text:'Ad · RC cars your best friend would love'};
+  }
+  if(!Number.isNaN(age)&&age>=55){
+    return {emoji:'🗳️',text:'Ad · Stay informed on local politics near you'};
+  }
+  return null;
+}
+function getBestAdContext(){
+  for(const p of people()){
+    const ctx=getAdContext(p);
+    if(ctx) return ctx;
+  }
+  return null;
+}
+function renderAdSlot(person){
+  const ctx=person?getAdContext(person):getBestAdContext();
+  const text=ctx?`${ctx.emoji} ${ctx.text}`:'Ad · Your message here';
+  return `<div class="ad-placeholder">${esc(text)}</div>`;
+}
+
 // ── Auth & State ──────────────────────────────────────────────────────────────
 let me=null, myPw=null, isSignUp=false;
-let _state={people:[],hiddenScales:[],pendingRequests:[],sentRequests:[],displayName:'',photoDataUrl:null,bio:'',streaksEnabled:false};
+let _state={people:[],hiddenScales:[],pendingRequests:[],sentRequests:[],displayName:'',photoDataUrl:null,streaksEnabled:false};
 
 function apiHeaders(){return{'Content-Type':'application/json','x-username':me,'x-password':myPw};}
 async function apiReq(method,path,body){
@@ -507,6 +732,7 @@ function sentReqs(){return _state.sentRequests||[];}
 
 async function loadMe(){
   _state=await apiReq('GET','/me');
+  _state.plan='best';_state.trialActive=false;
   (_state.pendingNotifications||[]).forEach(n=>{
     if(Notification.permission==='granted'){
       const emoji=n.type==='romantic'?'💕':'👥';
@@ -525,6 +751,12 @@ async function toggleScale(k){
   renderAll();
   await apiReq('PATCH','/me',{hiddenScales:h});
 }
+async function toggleStreaks(){
+  const v=!_state.streaksEnabled;
+  _state.streaksEnabled=v;
+  renderAll();
+  await apiReq('PATCH','/me',{streaksEnabled:v});
+}
 
 function toggleLearnMore(){
   const content=document.getElementById('lm-content');
@@ -539,10 +771,10 @@ function toggleLearnMore(){
 // Onboarding modal
 var obPage=0;var obTotal=8;
 function obBuildDots(){var d=document.getElementById('ob-dots');d.innerHTML='';for(var i=0;i<obTotal;i++){var dot=document.createElement('div');dot.className='ob-dot'+(i===obPage?' active':'');d.appendChild(dot);}}
-function obSetPage(n){obPage=n;document.getElementById('ob-slider').style.transform='translateX(-'+(n*(100/obTotal))+'%)';obBuildDots();document.getElementById('ob-btn').textContent=n===obTotal-1?'Got it':'Next';document.getElementById('ob-back-btn').style.display=n>0?'':'none';}
+function obSetPage(n){obPage=n;document.getElementById('ob-slider').style.transform='translateX(-'+(n*(100/obTotal))+'%)';obBuildDots();document.getElementById('ob-btn').textContent=n===obTotal-1?L('doneBtn'):L('nextBtn')||'Next';document.getElementById('ob-back-btn').style.display=n>0?'':'none';document.getElementById('ob-back-btn').textContent=L('back');}
 function obNext(){if(obPage<obTotal-1){obSetPage(obPage+1);}else{obClose();}}
 function obBack(){if(obPage>0){obSetPage(obPage-1);}}
-function obOpen(){obSetPage(0);document.getElementById('ob-overlay').classList.add('show');initObSwipe();}
+function obOpen(){renderOnboarding();obSetPage(0);document.getElementById('ob-overlay').classList.add('show');initObSwipe();}
 function initObSwipe(){
   const sh=document.getElementById('ob-sheet');
   if(sh._swipeInit)return;sh._swipeInit=true;
@@ -561,21 +793,314 @@ function initObSwipe(){
 }
 function obClose(e){if(e&&e.target!==document.getElementById('ob-overlay'))return;document.getElementById('ob-overlay').classList.remove('show');if(me){localStorage.setItem('vb_seen_ob_'+me,'1');}}
 
+const LANG_STRINGS={
+  en:{
+    dir:'ltr',
+    // Login
+    sub:'Define your relationships without the stress',username:'Username',password:'Password',signin:'Sign In',signup:'Create Account',learnMore:'Learn More',switchToSignup:"Don't have an account? <b>Sign Up</b>",switchToSignin:'Already have an account? <b>Sign In</b>',fillFields:'Fill in all fields',userShort:'Username too short',
+    // Nav / tabs
+    people:'People',messages:'Messages',profile:'Profile',
+    // People tab
+    searchPeople:'Search added people…',feedbackMsg:'Feedback for the app? Message Rory',tapToRate:'Tap to rate',vibeScore:'Vibe Score',noPeopleTitle:'No people yet',noPeopleSub:'Tap + to find or add someone',pendingLabel:'Pending',wantsToConnect:'wants to connect',requestSent:'Request sent',acceptBtn:'Accept',clearBtn:'Clear',cancelBtn:'Cancel',
+    // Add sheet
+    addPerson:'Add Person',searchByUsername:'Search by username…',shareInviteLink:'🔗 Share Invite Link',
+    // Search results
+    searching:'Searching…',noContacts:'No contacts found on Vibes',noUsers:'No users found for',
+    // Detail sheet
+    removeBtn:'Remove',addBtn:'Add',removedByThem:'removed by them',mutual:'mutual',tapDotToRate:'Tap a dot to rate',removePerson:'Remove Person',doneBtn:'Done',youHaveCommitted:'You have a romantic Vibe Score of Dating or higher with another user',theyHaveCommitted:'This person has a romantic Vibe Score of Dating or higher with another user',
+    // Scale steps
+    friendSteps:['Acquaintance','Friend','Good Friend','Best Friend','Ride or Die'],
+    romanticSteps:['No Attraction','Curious','Talking','Dating','Partner','Soulmate'],
+    // Messages tab
+    noMsgTitle:'No messages yet',noMsgSub:'Tap the button above to start a conversation',couldntLoad:"Couldn't load messages",noConnections:'No connections yet',noResults:'No results',
+    // New message sheet
+    newMessage:'New Message',searchPeopleMsg:'Search people…',
+    // Chat
+    back:'Back',nextBtn:'Next',messagePlaceholder:'Message…',sayHello:'Say hello!',readReceipt:'Read',dayStreak:'day streak',gettingSuggestions:'Getting suggestions…',couldntGetSuggestions:"Couldn't get suggestions, try again",
+    // Profile / Settings
+    editProfile:'Edit Profile',installApp:'Install as App',turnOnNotifications:'🔔 Turn On Notifications',romantic:'Romantic',streaks:'Streaks',planLabel:'Plan',adPreferences:'Ad Preferences',editBtn:'Edit',upgradeBtn:'Upgrade',signOut:'Sign Out',deleteAccount:'Delete Account',freeTrial:'Free Trial',
+    // Profile sheet
+    changePhoto:'Change Photo',displayName:'Display Name',displayNamePh:'Display name',usernameLabel:'Username:',iconColor:'Icon Color',saveBtn:'Save',
+    // Ad profile sheet
+    helpAds:'Help Us Show Better Ads',helpAdsSub:'All fields are required so the ads you see stay relevant. You can update these anytime from your Profile.',dateOfBirth:'Date of Birth',gender:'Gender',genderSelect:'Select…',genderNone:'Prefer not to say',genderF:'Female',genderM:'Male',genderNB:'Non-binary',genderO:'Other',hobbies:'Hobbies',hobbiesPh:'e.g. hiking, gaming, cooking',location:'Location',locationNote:'📍 Your device will ask to confirm location access',locationShared:'Location shared — thanks!',locationNA:"Location isn't available on this device.",
+    // Plan sheet
+    choosePlan:"Choose Your Plan",trialEndedPlan:"You're on Best — pick a plan to keep going",
+    currentPlan:'Current Plan',choosePlanBtn:'Choose',
+    plans:{
+      free:{name:'Free',tagline:'Get started at no cost',features:['Track unlimited friendships','Rate vibes for friends & romantic interests','Shows ads','Helps us tailor ads to you (age, gender, hobbies)']},
+      plus:{name:'Plus',tagline:'Rizz Assist for less, ads included',features:['Everything in Free','✨ Rizz Assist — AI message suggestions','Shows ads','Cheaper than Best since ads help cover the cost']},
+      better:{name:'Better',tagline:'No ads, same great experience',features:['Everything in Free','No ads, ever','No ad-targeting questions']},
+      best:{name:'Best',tagline:'The full experience',features:['Everything in Better','✨ Rizz Assist — AI message suggestions','No ads, ever']},
+    },
+    // Confirm delete
+    confirmDeleteMsg:'Delete your account? This will permanently remove all your data and cannot be undone.',
+  },
+  zh:{
+    dir:'ltr',
+    sub:'轻松定义你的人际关系',username:'用户名',password:'密码',signin:'登录',signup:'注册账号',learnMore:'了解更多',switchToSignup:'还没有账号？<b>注册</b>',switchToSignin:'已有账号？<b>登录</b>',fillFields:'请填写所有字段',userShort:'用户名太短',
+    people:'联系人',messages:'消息',profile:'我的',
+    searchPeople:'搜索已添加的人…',feedbackMsg:'对应用有反馈？发消息给 Rory',tapToRate:'点击评分',vibeScore:'氛围分',noPeopleTitle:'还没有联系人',noPeopleSub:'点击 + 查找或添加',pendingLabel:'待处理',wantsToConnect:'想要与你建立联系',requestSent:'已发送请求',acceptBtn:'接受',clearBtn:'忽略',cancelBtn:'取消',
+    addPerson:'添加联系人',searchByUsername:'按用户名搜索…',shareInviteLink:'🔗 分享邀请链接',
+    searching:'搜索中…',noContacts:'在 Vibes 上未找到联系人',noUsers:'未找到用户',
+    removeBtn:'移除',addBtn:'添加',removedByThem:'对方已移除',mutual:'互相',tapDotToRate:'点击点来评分',removePerson:'移除此人',doneBtn:'完成',youHaveCommitted:'你与另一位用户的浪漫氛围分已达到约会或以上',theyHaveCommitted:'此人与另一位用户的浪漫氛围分已达到约会或以上',
+    friendSteps:['熟人','朋友','好朋友','挚友','死党'],
+    romanticSteps:['无感','好奇','聊着','约会中','伴侣','灵魂伴侣'],
+    noMsgTitle:'暂无消息',noMsgSub:'点击上方按钮开始对话',couldntLoad:'无法加载消息',noConnections:'暂无联系人',noResults:'无结果',
+    newMessage:'新消息',searchPeopleMsg:'搜索联系人…',
+    back:'返回',nextBtn:'下一步',messagePlaceholder:'消息…',sayHello:'打个招呼吧！',readReceipt:'已读',dayStreak:'天连击',gettingSuggestions:'获取建议中…',couldntGetSuggestions:'无法获取建议，请重试',
+    editProfile:'编辑资料',installApp:'安装为应用',turnOnNotifications:'🔔 开启通知',romantic:'浪漫',streaks:'连击',planLabel:'套餐',adPreferences:'广告偏好',editBtn:'编辑',upgradeBtn:'升级',signOut:'退出登录',deleteAccount:'删除账号',freeTrial:'免费试用',
+    changePhoto:'更换照片',displayName:'显示名称',displayNamePh:'显示名称',usernameLabel:'用户名：',iconColor:'头像颜色',saveBtn:'保存',
+    helpAds:'帮助我们显示更好的广告',helpAdsSub:'所有字段均为必填，以便广告更符合你的兴趣。你可以随时在资料中更新。',dateOfBirth:'出生日期',gender:'性别',genderSelect:'请选择…',genderNone:'不愿透露',genderF:'女',genderM:'男',genderNB:'非二元',genderO:'其他',hobbies:'兴趣爱好',hobbiesPh:'如：远足、游戏、烹饪',location:'位置',locationNote:'📍 你的设备将请求位置权限',locationShared:'位置已共享，谢谢！',locationNA:'此设备上无法获取位置。',
+    choosePlan:'选择套餐',trialEndedPlan:'你正在使用 Best——请选择一个套餐继续',
+    currentPlan:'当前套餐',choosePlanBtn:'选择',
+    plans:{
+      free:{name:'免费',tagline:'零成本开始',features:['无限追踪友情','为朋友和浪漫对象评分','显示广告','帮助我们为你定制广告（年龄、性别、爱好）']},
+      plus:{name:'Plus',tagline:'含广告的低价版 Rizz 助手',features:['包含免费版所有功能','✨ Rizz 助手 — AI 消息建议','显示广告','因广告补贴成本，比 Best 更便宜']},
+      better:{name:'更好',tagline:'无广告，同样出色的体验',features:['包含免费版所有功能','永不显示广告','无广告定向问题']},
+      best:{name:'最佳',tagline:'完整体验',features:['包含更好版所有功能','✨ Rizz 助手 — AI 消息建议','永不显示广告']},
+    },
+    confirmDeleteMsg:'删除账号？这将永久删除所有数据，无法撤销。',
+  },
+  hi:{
+    dir:'ltr',
+    sub:'बिना तनाव के अपने रिश्ते परिभाषित करें',username:'उपयोगकर्ता नाम',password:'पासवर्ड',signin:'साइन इन',signup:'खाता बनाएं',learnMore:'और जानें',switchToSignup:'खाता नहीं है? <b>साइन अप</b>',switchToSignin:'पहले से खाता है? <b>साइन इन</b>',fillFields:'सभी फ़ील्ड भरें',userShort:'उपयोगकर्ता नाम बहुत छोटा है',
+    people:'लोग',messages:'संदेश',profile:'प्रोफ़ाइल',
+    searchPeople:'जोड़े गए लोगों को खोजें…',feedbackMsg:'ऐप पर फ़ीडबैक? Rory को संदेश करें',tapToRate:'रेट करने के लिए टैप करें',vibeScore:'वाइब स्कोर',noPeopleTitle:'अभी कोई नहीं',noPeopleSub:'किसी को ढूंढने या जोड़ने के लिए + दबाएं',pendingLabel:'लंबित',wantsToConnect:'आपसे जुड़ना चाहते हैं',requestSent:'अनुरोध भेजा गया',acceptBtn:'स्वीकार करें',clearBtn:'हटाएं',cancelBtn:'रद्द करें',
+    addPerson:'व्यक्ति जोड़ें',searchByUsername:'उपयोगकर्ता नाम से खोजें…',shareInviteLink:'🔗 आमंत्रण लिंक साझा करें',
+    searching:'खोज रहे हैं…',noContacts:'Vibes पर कोई संपर्क नहीं मिला',noUsers:'कोई उपयोगकर्ता नहीं मिला',
+    removeBtn:'हटाएं',addBtn:'जोड़ें',removedByThem:'उन्होंने हटाया',mutual:'परस्पर',tapDotToRate:'रेट करने के लिए डॉट टैप करें',removePerson:'इस व्यक्ति को हटाएं',doneBtn:'हो गया',youHaveCommitted:'आपका किसी अन्य उपयोगकर्ता के साथ रोमांटिक वाइब स्कोर डेटिंग या उससे अधिक है',theyHaveCommitted:'इस व्यक्ति का किसी अन्य उपयोगकर्ता के साथ रोमांटिक वाइब स्कोर डेटिंग या उससे अधिक है',
+    friendSteps:['जान-पहचान','दोस्त','अच्छे दोस्त','बेस्ट फ्रेंड','खास दोस्त'],
+    romanticSteps:['कोई आकर्षण नहीं','उत्सुक','बात हो रही है','डेटिंग','साथी','आत्मीय साथी'],
+    noMsgTitle:'अभी कोई संदेश नहीं',noMsgSub:'बातचीत शुरू करने के लिए ऊपर का बटन दबाएं',couldntLoad:'संदेश लोड नहीं हो सके',noConnections:'अभी कोई कनेक्शन नहीं',noResults:'कोई परिणाम नहीं',
+    newMessage:'नया संदेश',searchPeopleMsg:'लोगों को खोजें…',
+    back:'वापस',nextBtn:'अगला',messagePlaceholder:'संदेश…',sayHello:'हैलो कहें!',readReceipt:'पढ़ा',dayStreak:'दिन की स्ट्रीक',gettingSuggestions:'सुझाव प्राप्त हो रहे हैं…',couldntGetSuggestions:'सुझाव नहीं मिल सके, फिर कोशिश करें',
+    editProfile:'प्रोफ़ाइल संपादित करें',installApp:'ऐप के रूप में इंस्टॉल करें',turnOnNotifications:'🔔 सूचनाएं चालू करें',romantic:'रोमांटिक',streaks:'स्ट्रीक',planLabel:'प्लान',adPreferences:'विज्ञापन प्राथमिकताएं',editBtn:'संपादित करें',upgradeBtn:'अपग्रेड करें',signOut:'साइन आउट',deleteAccount:'खाता हटाएं',freeTrial:'मुफ़्त परीक्षण',
+    changePhoto:'फ़ोटो बदलें',displayName:'प्रदर्शन नाम',displayNamePh:'प्रदर्शन नाम',usernameLabel:'उपयोगकर्ता नाम:',iconColor:'आइकन रंग',saveBtn:'सहेजें',
+    helpAds:'बेहतर विज्ञापन दिखाने में मदद करें',helpAdsSub:'सभी फ़ील्ड आवश्यक हैं। आप अपनी प्रोफ़ाइल से कभी भी अपडेट कर सकते हैं।',dateOfBirth:'जन्म तिथि',gender:'लिंग',genderSelect:'चुनें…',genderNone:'बताना नहीं चाहते',genderF:'महिला',genderM:'पुरुष',genderNB:'नॉन-बाइनरी',genderO:'अन्य',hobbies:'शौक',hobbiesPh:'जैसे: हाइकिंग, गेमिंग, खाना बनाना',location:'स्थान',locationNote:'📍 आपका डिवाइस स्थान पहुंच की पुष्टि करने के लिए पूछेगा',locationShared:'स्थान साझा किया — धन्यवाद!',locationNA:'इस डिवाइस पर स्थान उपलब्ध नहीं है।',
+    choosePlan:'अपना प्लान चुनें',trialEndedPlan:'आप Best पर हैं — जारी रखने के लिए एक प्लान चुनें',
+    currentPlan:'वर्तमान प्लान',choosePlanBtn:'चुनें',
+    plans:{
+      free:{name:'मुफ़्त',tagline:'बिना किसी लागत के शुरू करें',features:['असीमित दोस्ती ट्रैक करें','दोस्तों और रोमांटिक रिश्तों के लिए वाइब रेट करें','विज्ञापन दिखाता है','आपकी उम्र, लिंग, शौक के आधार पर विज्ञापन अनुकूलित करने में मदद']},
+      plus:{name:'Plus',tagline:'विज्ञापन सहित कम कीमत में Rizz सहायक',features:['मुफ़्त वाली सभी सुविधाएं','✨ Rizz सहायक — AI संदेश सुझाव','विज्ञापन दिखाता है','विज्ञापन से लागत कम होती है इसलिए Best से सस्ता']},
+      better:{name:'बेहतर',tagline:'बिना विज्ञापन, शानदार अनुभव',features:['मुफ़्त वाली सभी सुविधाएं','कभी विज्ञापन नहीं','विज्ञापन लक्षित करने के लिए कोई सवाल नहीं']},
+      best:{name:'सर्वश्रेष्ठ',tagline:'पूरा अनुभव',features:['बेहतर वाली सभी सुविधाएं','✨ Rizz सहायक — AI संदेश सुझाव','कभी विज्ञापन नहीं']},
+    },
+    confirmDeleteMsg:'खाता हटाएं? यह आपका सारा डेटा स्थायी रूप से हटा देगा और इसे पूर्ववत नहीं किया जा सकता।',
+  },
+  es:{
+    dir:'ltr',
+    sub:'Define tus relaciones sin el estrés',username:'Usuario',password:'Contraseña',signin:'Iniciar sesión',signup:'Crear cuenta',learnMore:'Saber más',switchToSignup:'¿No tienes cuenta? <b>Regístrate</b>',switchToSignin:'¿Ya tienes cuenta? <b>Inicia sesión</b>',fillFields:'Completa todos los campos',userShort:'Usuario demasiado corto',
+    people:'Personas',messages:'Mensajes',profile:'Perfil',
+    searchPeople:'Buscar personas añadidas…',feedbackMsg:'¿Comentarios? Escríbele a Rory',tapToRate:'Toca para valorar',vibeScore:'Puntuación Vibe',noPeopleTitle:'Sin personas aún',noPeopleSub:'Toca + para buscar o añadir a alguien',pendingLabel:'Pendiente',wantsToConnect:'quiere conectar contigo',requestSent:'Solicitud enviada',acceptBtn:'Aceptar',clearBtn:'Ignorar',cancelBtn:'Cancelar',
+    addPerson:'Añadir persona',searchByUsername:'Buscar por usuario…',shareInviteLink:'🔗 Compartir enlace de invitación',
+    searching:'Buscando…',noContacts:'No se encontraron contactos en Vibes',noUsers:'No se encontraron usuarios para',
+    removeBtn:'Quitar',addBtn:'Añadir',removedByThem:'eliminado por ellos',mutual:'mutuo',tapDotToRate:'Toca un punto para valorar',removePerson:'Eliminar persona',doneBtn:'Listo',youHaveCommitted:'Tienes una puntuación romántica de Saliendo o superior con otro usuario',theyHaveCommitted:'Esta persona tiene una puntuación romántica de Saliendo o superior con otro usuario',
+    friendSteps:['Conocido','Amigo','Buen amigo','Mejor amigo','Inseparable'],
+    romanticSteps:['Sin atracción','Curiosidad','Hablando','Saliendo','Pareja','Alma gemela'],
+    noMsgTitle:'Sin mensajes aún',noMsgSub:'Toca el botón de arriba para iniciar una conversación',couldntLoad:'No se pudieron cargar los mensajes',noConnections:'Sin conexiones aún',noResults:'Sin resultados',
+    newMessage:'Nuevo mensaje',searchPeopleMsg:'Buscar personas…',
+    back:'Volver',nextBtn:'Siguiente',messagePlaceholder:'Mensaje…',sayHello:'¡Di hola!',readReceipt:'Leído',dayStreak:'días seguidos',gettingSuggestions:'Obteniendo sugerencias…',couldntGetSuggestions:'No se obtuvieron sugerencias, inténtalo de nuevo',
+    editProfile:'Editar perfil',installApp:'Instalar como app',turnOnNotifications:'🔔 Activar notificaciones',romantic:'Romántico',streaks:'Rachas',planLabel:'Plan',adPreferences:'Preferencias de anuncios',editBtn:'Editar',upgradeBtn:'Mejorar',signOut:'Cerrar sesión',deleteAccount:'Eliminar cuenta',freeTrial:'Prueba gratuita',
+    changePhoto:'Cambiar foto',displayName:'Nombre visible',displayNamePh:'Nombre visible',usernameLabel:'Usuario:',iconColor:'Color del icono',saveBtn:'Guardar',
+    helpAds:'Ayúdanos a mostrarte mejores anuncios',helpAdsSub:'Todos los campos son obligatorios para que los anuncios sean relevantes. Puedes actualizarlos en tu perfil.',dateOfBirth:'Fecha de nacimiento',gender:'Género',genderSelect:'Seleccionar…',genderNone:'Prefiero no decirlo',genderF:'Femenino',genderM:'Masculino',genderNB:'No binario',genderO:'Otro',hobbies:'Aficiones',hobbiesPh:'p.ej. senderismo, videojuegos, cocinar',location:'Ubicación',locationNote:'📍 Tu dispositivo pedirá confirmar el acceso a la ubicación',locationShared:'Ubicación compartida — ¡gracias!',locationNA:'La ubicación no está disponible en este dispositivo.',
+    choosePlan:'Elige tu plan',trialEndedPlan:'Estás en Best — elige un plan para continuar',
+    currentPlan:'Plan actual',choosePlanBtn:'Elegir',
+    plans:{
+      free:{name:'Gratis',tagline:'Empieza sin coste',features:['Rastrea amistades ilimitadas','Valora vibes de amigos e intereses románticos','Muestra anuncios','Nos ayuda a personalizar anuncios (edad, género, aficiones)']},
+      plus:{name:'Plus',tagline:'Asistente de ligue más barato, con anuncios',features:['Todo lo de Gratis','✨ Asistente de ligue — sugerencias de mensajes con IA','Muestra anuncios','Más barato que Lo mejor gracias a los anuncios']},
+      better:{name:'Mejor',tagline:'Sin anuncios, igual de bueno',features:['Todo lo de Gratis','Sin anuncios, nunca','Sin preguntas de personalización de anuncios']},
+      best:{name:'Lo mejor',tagline:'La experiencia completa',features:['Todo lo de Mejor','✨ Asistente de ligue — sugerencias de mensajes con IA','Sin anuncios, nunca']},
+    },
+    confirmDeleteMsg:'¿Eliminar tu cuenta? Esto borrará permanentemente todos tus datos y no se puede deshacer.',
+  },
+  ar:{
+    dir:'rtl',
+    sub:'حدّد علاقاتك بدون ضغط',username:'اسم المستخدم',password:'كلمة المرور',signin:'تسجيل الدخول',signup:'إنشاء حساب',learnMore:'اعرف أكثر',switchToSignup:'ليس لديك حساب؟ <b>سجّل</b>',switchToSignin:'لديك حساب بالفعل؟ <b>سجّل الدخول</b>',fillFields:'يرجى ملء جميع الحقول',userShort:'اسم المستخدم قصير جداً',
+    people:'الأشخاص',messages:'الرسائل',profile:'الملف الشخصي',
+    searchPeople:'ابحث عن الأشخاص المضافين…',feedbackMsg:'ملاحظات على التطبيق؟ راسل Rory',tapToRate:'اضغط للتقييم',vibeScore:'نقاط Vibe',noPeopleTitle:'لا أحد بعد',noPeopleSub:'اضغط + للبحث أو إضافة شخص',pendingLabel:'معلّق',wantsToConnect:'يريد التواصل معك',requestSent:'تم إرسال الطلب',acceptBtn:'قبول',clearBtn:'تجاهل',cancelBtn:'إلغاء',
+    addPerson:'إضافة شخص',searchByUsername:'ابحث باسم المستخدم…',shareInviteLink:'🔗 مشاركة رابط الدعوة',
+    searching:'جارٍ البحث…',noContacts:'لم يُعثر على جهات اتصال في Vibes',noUsers:'لم يُعثر على مستخدمين لـ',
+    removeBtn:'إزالة',addBtn:'إضافة',removedByThem:'أزاله الطرف الآخر',mutual:'متبادل',tapDotToRate:'اضغط على نقطة للتقييم',removePerson:'إزالة الشخص',doneBtn:'تم',youHaveCommitted:'لديك نقاط Vibe رومانسية بمستوى المواعدة أو أعلى مع مستخدم آخر',theyHaveCommitted:'لدى هذا الشخص نقاط Vibe رومانسية بمستوى المواعدة أو أعلى مع مستخدم آخر',
+    friendSteps:['معارف','صديق','صديق جيد','صديق مقرب','لا يُفارق'],
+    romanticSteps:['لا جاذبية','فضول','تحدث','مواعدة','شريك','رفيق الروح'],
+    noMsgTitle:'لا رسائل بعد',noMsgSub:'اضغط الزر أعلاه لبدء محادثة',couldntLoad:'تعذّر تحميل الرسائل',noConnections:'لا اتصالات بعد',noResults:'لا نتائج',
+    newMessage:'رسالة جديدة',searchPeopleMsg:'ابحث عن أشخاص…',
+    back:'رجوع',nextBtn:'التالي',messagePlaceholder:'رسالة…',sayHello:'قل مرحباً!',readReceipt:'مقروءة',dayStreak:'يوم متواصل',gettingSuggestions:'جارٍ الحصول على اقتراحات…',couldntGetSuggestions:'تعذّر الحصول على اقتراحات، حاول مجدداً',
+    editProfile:'تعديل الملف الشخصي',installApp:'تثبيت كتطبيق',turnOnNotifications:'🔔 تفعيل الإشعارات',romantic:'رومانسي',streaks:'تواصل يومي',planLabel:'الخطة',adPreferences:'تفضيلات الإعلانات',editBtn:'تعديل',upgradeBtn:'ترقية',signOut:'تسجيل الخروج',deleteAccount:'حذف الحساب',freeTrial:'تجربة مجانية',
+    changePhoto:'تغيير الصورة',displayName:'الاسم المعروض',displayNamePh:'الاسم المعروض',usernameLabel:'اسم المستخدم:',iconColor:'لون الأيقونة',saveBtn:'حفظ',
+    helpAds:'ساعدنا في عرض إعلانات أفضل',helpAdsSub:'جميع الحقول مطلوبة لتبقى الإعلانات ذات صلة. يمكنك التحديث في أي وقت من ملفك الشخصي.',dateOfBirth:'تاريخ الميلاد',gender:'الجنس',genderSelect:'اختر…',genderNone:'أفضّل عدم الإفصاح',genderF:'أنثى',genderM:'ذكر',genderNB:'ثنائي الجنس',genderO:'آخر',hobbies:'الهوايات',hobbiesPh:'مثل: المشي، الألعاب، الطبخ',location:'الموقع',locationNote:'📍 سيطلب جهازك تأكيد الوصول إلى الموقع',locationShared:'تمت مشاركة الموقع — شكراً!',locationNA:'الموقع غير متاح على هذا الجهاز.',
+    choosePlan:'اختر خطتك',trialEndedPlan:'أنت على Best — اختر خطة للمتابعة',
+    currentPlan:'الخطة الحالية',choosePlanBtn:'اختر',
+    plans:{
+      free:{name:'مجاني',tagline:'ابدأ بدون أي تكلفة',features:['تتبع صداقات غير محدودة','قيّم أجواء الأصدقاء والاهتمامات الرومانسية','يعرض إعلانات','يساعدنا على تخصيص الإعلانات (العمر، الجنس، الهوايات)']},
+      plus:{name:'Plus',tagline:'مساعد Rizz بسعر أقل مع إعلانات',features:['كل ما في المجاني','✨ مساعد Rizz — اقتراحات رسائل بالذكاء الاصطناعي','يعرض إعلانات','أرخص من Best لأن الإعلانات تساهم في التكلفة']},
+      better:{name:'أفضل',tagline:'بلا إعلانات، نفس التجربة الرائعة',features:['كل ما في المجاني','بلا إعلانات أبداً','بلا أسئلة لاستهداف الإعلانات']},
+      best:{name:'الأفضل',tagline:'التجربة الكاملة',features:['كل ما في أفضل','✨ مساعد Rizz — اقتراحات رسائل بالذكاء الاصطناعي','بلا إعلانات أبداً']},
+    },
+    confirmDeleteMsg:'هل تريد حذف حسابك؟ سيؤدي ذلك إلى حذف جميع بياناتك بشكل دائم ولا يمكن التراجع عنه.',
+  },
+};
+function L(key){return (LANG_STRINGS[_lang]||LANG_STRINGS.en)[key]||LANG_STRINGS.en[key]||key;}
+
+const OB_PAGES={
+  en:[
+    {emoji:'✨',title:'Welcome to Vibes',body:'A private space to track where your friendships and connections actually stand. Only you see your ratings — nothing is shared.'},
+    {emoji:'🧭',title:"What's a Vibe Score?",body:"Rate people where you want the relationship to go, not just where it is right now. Your rating is always private. You only see a Vibe Score with someone once you've rated them too — then it shows up as the lower of the two ratings. Your higher rating stays yours. Use it as an intention, not a verdict."},
+    {emoji:'👋',title:'Rate your friendships',steps:['Everyone in your life sits somewhere on the friend scale, from Acquaintance to Ride or Die.',"Open someone's profile and tap a dot to mark where they're at.",'Update it anytime the vibe shifts — nothing is locked in.'],detail:'Acquaintance · Friend · Good Friend · Best Friend · Ride or Die'},
+    {emoji:'💕',title:'Track romantic vibes too',steps:['The romantic scale is on by default for everyone you connect with.','Tap a dot to mark where things stand, from Curious to Soulmate.',"Don't want it showing for someone? Turn it off for them anytime."],detail:'Curious · Talking · Dating · Partner · Soulmate'},
+    {emoji:'✨',title:'Rizz assist',body:"Once someone's romantic vibe reaches Curious or higher, a ✨ button appears in your chat with them. Tap it and the app will suggest something to say — a little AI help when you're not sure how to move things forward."},
+    {emoji:'🔒',title:'When things get serious',body:"Once your Vibe Score with someone hits Dating or higher, your romantic scale gets locked for everyone else — and at the same time, anyone viewing your profile sees that you're in a relationship. The app recognises you're in something and takes you off the table. No action needed — it happens automatically."},
+    {emoji:'💫',title:'A use case',body:'Sam and Alex secretly like each other. Sam, ready to date, marks their vibe at Dating. Alex, wanting to take things a bit slower, marks Talking. They would have never known they liked each other — but now they\'re talking.'},
+    {emoji:'🙌',title:'No pressure, no labels',body:"Vibes isn't here to define anyone or create pressure around where things stand. Scores are private — no one else sees them. Don't let the numbers box anyone in. The app works for you, not the other way around."},
+  ],
+  zh:[
+    {emoji:'✨',title:'欢迎来到 Vibes',body:'一个私密空间，记录你的友情与人际关系的真实状态。只有你能看到自己的评分——不会共享给任何人。'},
+    {emoji:'🧭',title:'什么是氛围分？',body:'根据你希望关系发展的方向来评分，而不仅仅是现状。你的评分始终保密。只有当对方也评分后，你们才会看到氛围分——显示为两人评分中较低的那个。你的较高评分仍属于你。把它当作一种意图，而不是判断。'},
+    {emoji:'👋',title:'为你的友情评分',steps:['生活中的每个人都在友情刻度上有位置，从熟人到死党。','打开某人的资料，点击一个点来标记关系所在。','随时更新——没有什么是固定不变的。'],detail:'熟人 · 朋友 · 好朋友 · 挚友 · 死党'},
+    {emoji:'💕',title:'也追踪浪漫氛围',steps:['浪漫刻度默认对所有联系人开启。','点击一个点，从好奇到灵魂伴侣，标记当前状态。','不想为某人显示？随时关闭。'],detail:'好奇 · 聊着 · 约会中 · 伴侣 · 灵魂伴侣'},
+    {emoji:'✨',title:'撩人助手',body:'一旦某人的浪漫氛围达到好奇或更高，聊天界面会出现一个 ✨ 按钮。点击它，应用会为你推荐一些话——当你不知道如何推进时，有一点 AI 帮助。'},
+    {emoji:'🔒',title:'当关系变认真',body:'一旦你与某人的氛围分达到约会或更高，你对其他所有人的浪漫刻度将被锁定——同时，查看你资料的人会看到你正在恋爱中。应用识别到你在一段关系中，并将你从待选名单中移除。无需任何操作——自动发生。'},
+    {emoji:'💫',title:'一个使用案例',body:'Sam 和 Alex 暗恋彼此。Sam 准备好约会，将氛围标记为"约会中"。Alex 想慢慢来，标记为"聊着"。他们本来永远不会知道彼此喜欢对方——但现在他们开始聊了。'},
+    {emoji:'🙌',title:'没有压力，没有标签',body:'Vibes 不是来定义任何人或制造压力的。分数是私密的——没有人能看到。不要让数字束缚任何人。应用为你服务，而不是相反。'},
+  ],
+  hi:[
+    {emoji:'✨',title:'Vibes में आपका स्वागत है',body:'एक निजी स्थान जहाँ आप अपनी दोस्ती और रिश्तों की असली स्थिति ट्रैक कर सकते हैं। केवल आप अपनी रेटिंग देख सकते हैं — कुछ भी साझा नहीं होता।'},
+    {emoji:'🧭',title:'वाइब स्कोर क्या है?',body:'लोगों को वैसे रेट करें जैसा आप रिश्ते को आगे ले जाना चाहते हैं, न कि सिर्फ जहाँ यह अभी है। आपकी रेटिंग हमेशा निजी रहती है। आप किसी के साथ वाइब स्कोर तभी देख सकते हैं जब उन्होंने भी आपको रेट किया हो — फिर यह दोनों रेटिंग में से कम वाला दिखता है। आपकी ऊंची रेटिंग आपकी रहती है। इसे इरादे के रूप में उपयोग करें, फैसले के रूप में नहीं।'},
+    {emoji:'👋',title:'अपनी दोस्ती को रेट करें',steps:['आपकी जिंदगी में हर व्यक्ति दोस्ती के पैमाने पर कहीं न कहीं है, जान-पहचान से लेकर खास दोस्त तक।','किसी की प्रोफ़ाइल खोलें और एक डॉट टैप करके उनकी स्थिति चिह्नित करें।','जब भी वाइब बदले, अपडेट करें — कुछ भी पक्का नहीं।'],detail:'जान-पहचान · दोस्त · अच्छे दोस्त · बेस्ट फ्रेंड · खास दोस्त'},
+    {emoji:'💕',title:'रोमांटिक वाइब भी ट्रैक करें',steps:['रोमांटिक स्केल डिफ़ॉल्ट रूप से सभी के लिए चालू है।','एक डॉट टैप करके स्थिति चिह्नित करें, उत्सुक से आत्मीय साथी तक।','किसी के लिए नहीं दिखाना? कभी भी बंद करें।'],detail:'उत्सुक · बात हो रही है · डेटिंग · साथी · आत्मीय साथी'},
+    {emoji:'✨',title:'रिज़ असिस्ट',body:'जैसे ही किसी का रोमांटिक वाइब उत्सुक या उससे ऊपर पहुँचता है, चैट में ✨ बटन दिखाई देता है। इसे टैप करें और ऐप कुछ कहने का सुझाव देगा — थोड़ी AI मदद जब आप नहीं जानते कि आगे कैसे बढ़ें।'},
+    {emoji:'🔒',title:'जब बात गंभीर हो',body:'एक बार जब किसी के साथ आपका वाइब स्कोर डेटिंग या उससे ऊपर पहुँच जाए, तो बाकी सभी के लिए आपका रोमांटिक स्केल लॉक हो जाता है — और साथ ही आपकी प्रोफ़ाइल देखने वाले देख सकते हैं कि आप रिश्ते में हैं। ऐप खुद पहचान लेता है और आपको उपलब्ध सूची से हटा देता है। कोई कार्रवाई जरूरी नहीं — यह अपने आप होता है।'},
+    {emoji:'💫',title:'एक उदाहरण',body:'Sam और Alex एक-दूसरे को गुप्त रूप से पसंद करते हैं। Sam, डेट करने के लिए तैयार, वाइब को डेटिंग पर चिह्नित करता है। Alex, थोड़ा धीरे जाना चाहता है, "बात हो रही है" चिह्नित करता है। वे कभी नहीं जान पाते कि एक-दूसरे को पसंद करते हैं — लेकिन अब वे बात कर रहे हैं।'},
+    {emoji:'🙌',title:'कोई दबाव नहीं, कोई लेबल नहीं',body:'Vibes यहाँ किसी को परिभाषित करने या दबाव बनाने के लिए नहीं है। स्कोर निजी हैं — कोई और नहीं देख सकता। संख्याओं को किसी को बाँधने न दें। ऐप आपके लिए काम करता है, इसके विपरीत नहीं।'},
+  ],
+  es:[
+    {emoji:'✨',title:'Bienvenido a Vibes',body:'Un espacio privado para saber cómo están realmente tus amistades y conexiones. Solo tú ves tus valoraciones — nada se comparte.'},
+    {emoji:'🧭',title:'¿Qué es una Puntuación Vibe?',body:'Valora a las personas según hacia dónde quieres que vaya la relación, no solo donde está ahora. Tu valoración es siempre privada. Solo ves una Puntuación Vibe con alguien cuando ellos también te han valorado — entonces aparece como la más baja de las dos. Tu valoración más alta sigue siendo tuya. Úsala como una intención, no como un veredicto.'},
+    {emoji:'👋',title:'Valora tus amistades',steps:['Cada persona en tu vida ocupa un lugar en la escala de amistad, de Conocido a Inseparable.','Abre el perfil de alguien y toca un punto para marcar dónde están.','Actualízalo cuando el vibe cambie — nada está fijo.'],detail:'Conocido · Amigo · Buen amigo · Mejor amigo · Inseparable'},
+    {emoji:'💕',title:'Sigue los vibes románticos también',steps:['La escala romántica está activada por defecto para todos tus contactos.','Toca un punto para marcar cómo van las cosas, de Curiosidad a Alma gemela.','¿No quieres que aparezca para alguien? Desactívala cuando quieras.'],detail:'Curiosidad · Hablando · Saliendo · Pareja · Alma gemela'},
+    {emoji:'✨',title:'Asistente de ligue',body:'Cuando el vibe romántico de alguien alcanza Curiosidad o más, aparece un botón ✨ en tu chat con ellos. Tócalo y la app sugerirá algo que decir — un poco de ayuda de IA cuando no sabes cómo avanzar.'},
+    {emoji:'🔒',title:'Cuando las cosas se ponen serias',body:'Una vez que tu Puntuación Vibe con alguien llega a Saliendo o más, tu escala romántica se bloquea para todos los demás — y al mismo tiempo, quien vea tu perfil verá que estás en una relación. La app reconoce que estás en algo y te retira de la lista. No hace falta hacer nada — ocurre automáticamente.'},
+    {emoji:'💫',title:'Un caso de uso',body:'Sam y Alex se gustan en secreto. Sam, listo para salir, marca su vibe en Saliendo. Alex, queriendo ir más despacio, marca Hablando. Nunca habrían sabido que se gustaban — pero ahora están hablando.'},
+    {emoji:'🙌',title:'Sin presión, sin etiquetas',body:'Vibes no está aquí para definir a nadie ni crear presión sobre cómo van las cosas. Las puntuaciones son privadas — nadie más las ve. No dejes que los números encasillen a nadie. La app trabaja para ti, no al revés.'},
+  ],
+  ar:[
+    {emoji:'✨',title:'مرحباً بك في Vibes',body:'مساحة خاصة لتتبع الوضع الحقيقي لصداقاتك وعلاقاتك. أنت وحدك ترى تقييماتك — لا شيء يُشارك مع الآخرين.'},
+    {emoji:'🧭',title:'ما هي نقاط Vibe؟',body:'قيّم الناس وفق الاتجاه الذي تريد أن تسير فيه العلاقة، وليس فقط وضعها الحالي. تقييمك خاص دائماً. لن ترى نقاط Vibe مع أحد إلا إذا قيّمك هو أيضاً — وعندها تظهر كأدنى التقييمَين. تقييمك الأعلى يبقى لك. استخدمه كنية لا كحكم.'},
+    {emoji:'👋',title:'قيّم صداقاتك',steps:['كل شخص في حياتك له مكان على مقياس الصداقة، من معارف إلى لا يُفارق.','افتح ملف شخص ما واضغط على نقطة لتحديد موقعهم.','حدّثه متى تغيّر الوضع — لا شيء محدد إلى الأبد.'],detail:'معارف · صديق · صديق جيد · صديق مقرب · لا يُفارق'},
+    {emoji:'💕',title:'تتبع الأجواء الرومانسية أيضاً',steps:['المقياس الرومانسي مفعّل افتراضياً لجميع الاتصالات.','اضغط على نقطة لتحديد الوضع، من فضول إلى رفيق الروح.','لا تريده يظهر لشخص ما؟ أوقفه في أي وقت.'],detail:'فضول · تحدث · مواعدة · شريك · رفيق الروح'},
+    {emoji:'✨',title:'مساعد الإعجاب',body:'حين يصل الجو الرومانسي لشخص ما إلى فضول أو أعلى، يظهر زر ✨ في محادثتك معه. اضغط عليه وسيقترح التطبيق شيئاً تقوله — قليل من مساعدة الذكاء الاصطناعي حين لا تعرف كيف تتقدم.'},
+    {emoji:'🔒',title:'حين تصبح الأمور جدية',body:'حين تصل نقاط Vibe بينك وبين شخص ما إلى مواعدة أو أعلى، يُقفل مقياسك الرومانسي مع الجميع — وفي الوقت نفسه، من يرى ملفك الشخصي سيعلم أنك في علاقة. يتعرف التطبيق على وضعك ويزيلك من القائمة. لا حاجة لأي إجراء — يحدث تلقائياً.'},
+    {emoji:'💫',title:'حالة استخدام',body:'سام وأليكس يحبان بعضهما سراً. سام، مستعد للمواعدة، يضع تقييمه على مواعدة. أليكس، يريد التمهّل، يضع تحدث. لم يكونا ليعلما أنهما يحبان بعضهما — لكنهما الآن يتحدثان.'},
+    {emoji:'🙌',title:'بلا ضغط، بلا تصنيفات',body:'Vibes ليس هنا لتعريف أحد أو لخلق ضغط حول أين تقف الأمور. النقاط خاصة — لا أحد يراها. لا تدع الأرقام تحبس أحداً. التطبيق يعمل لأجلك، وليس العكس.'},
+  ],
+};
+
+function renderOnboarding(){
+  const pages=OB_PAGES[_lang]||OB_PAGES.en;
+  const s=LANG_STRINGS[_lang]||LANG_STRINGS.en;
+  obTotal=pages.length;
+  document.getElementById('ob-slider').innerHTML=pages.map(p=>{
+    if(p.steps){
+      return `<div class="ob-page"><div class="ob-emoji">${p.emoji}</div><div class="ob-title">${p.title}</div><ul class="ob-steps">${p.steps.map(s=>`<li>${s}</li>`).join('')}</ul><div class="ob-detail">${p.detail}</div></div>`;
+    }
+    return `<div class="ob-page"><div class="ob-emoji">${p.emoji}</div><div class="ob-title">${p.title}</div><div class="ob-body">${p.body}</div></div>`;
+  }).join('');
+  // Update nav buttons
+  const backBtn=document.getElementById('ob-back-btn');
+  const nextBtn=document.getElementById('ob-btn');
+  if(backBtn)backBtn.textContent=s.back;
+  if(nextBtn)nextBtn.textContent=obPage===obTotal-1?s.doneBtn:s.nextBtn||'Next';
+  obSetPage(obPage<pages.length?obPage:0);
+}
+let _lang='en';
+function setLang(lang){
+  _lang=lang;
+  const s=LANG_STRINGS[lang]||LANG_STRINGS.en;
+  // Auth screen
+  document.getElementById('auth').dir=s.dir;
+  document.getElementById('auth-sub').textContent=s.sub;
+  document.getElementById('au').placeholder=s.username;
+  document.getElementById('ap').placeholder=s.password;
+  document.getElementById('asub').textContent=isSignUp?s.signup:s.signin;
+  document.getElementById('aswitch').innerHTML=isSignUp?s.switchToSignin:s.switchToSignup;
+  document.getElementById('learn-more-btn').textContent=s.learnMore;
+  document.querySelectorAll('#lang-picker .lang-btn').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick')===`setLang('${lang}')`));
+  // Tab labels
+  const tblp=document.getElementById('tab-lbl-people');if(tblp)tblp.textContent=s.people;
+  const tblm=document.getElementById('tab-lbl-messages');if(tblm)tblm.textContent=s.messages;
+  const tblpr=document.getElementById('tab-lbl-profile');if(tblpr)tblpr.textContent=s.profile;
+  // App direction
+  const appEl=document.getElementById('app');if(appEl)appEl.dir=s.dir;
+  // Search bar & feedback
+  const ps=document.getElementById('people-search');if(ps)ps.placeholder=s.searchPeople;
+  const fm=document.getElementById('feedback-msg');if(fm)fm.textContent=s.feedbackMsg;
+  // Nav title
+  const nt=document.getElementById('ntitle');if(nt){const tabTitles={people:s.people,messages:s.messages,settings:s.profile};nt.textContent=tabTitles[curTab]||s.people;}
+  // Install banner (login page)
+  const ib=document.getElementById('install-banner');if(ib)ib.textContent=s.installApp;
+  // Chat
+  const cbl=document.getElementById('chat-back-lbl');if(cbl)cbl.textContent=s.back;
+  const ci=document.getElementById('chat-input');if(ci)ci.placeholder=s.messagePlaceholder;
+  // Add sheet
+  const ast=document.getElementById('add-sh-title');if(ast)ast.textContent=s.addPerson;
+  const si=document.getElementById('search-input');if(si)si.placeholder=s.searchByUsername;
+  const slb=document.getElementById('share-link-btn');if(slb)slb.textContent=s.shareInviteLink;
+  const acb=document.getElementById('add-cancel-btn');if(acb)acb.textContent=s.cancelBtn;
+  // New message sheet
+  const nmt=document.getElementById('newmsg-sh-title');if(nmt)nmt.textContent=s.newMessage;
+  const nms=document.getElementById('newmsg-search');if(nms)nms.placeholder=s.searchPeopleMsg;
+  // Detail sheet
+  const ddb=document.getElementById('det-del');if(ddb)ddb.textContent=s.removePerson;
+  const ddn=document.getElementById('det-done-btn');if(ddn)ddn.textContent=s.doneBtn;
+  // Profile sheet
+  const pst=document.getElementById('prof-sh-title');if(pst)pst.textContent=s.editProfile;
+  const cpl=document.getElementById('change-photo-lbl');if(cpl)cpl.textContent=s.changePhoto;
+  const dnl=document.getElementById('display-name-lbl');if(dnl)dnl.textContent=s.displayName;
+  const pdn=document.getElementById('prof-displayname');if(pdn)pdn.placeholder=s.displayNamePh;
+  const ult=document.getElementById('username-label-txt');if(ult)ult.textContent=s.usernameLabel;
+  const icl=document.getElementById('icon-color-lbl');if(icl)icl.textContent=s.iconColor;
+  const psb=document.getElementById('prof-save-btn');if(psb)psb.textContent=s.saveBtn;
+  const pcb=document.getElementById('prof-cancel-btn');if(pcb)pcb.textContent=s.cancelBtn;
+  // Ad profile sheet
+  const aps=document.getElementById('adprof-sh-title');if(aps)aps.textContent=s.helpAds;
+  const apss=document.getElementById('adprof-sh-sub');if(apss)apss.textContent=s.helpAdsSub;
+  const adl=document.getElementById('adprof-dob-lbl');if(adl)adl.textContent=s.dateOfBirth;
+  const agl=document.getElementById('adprof-gender-lbl');if(agl)agl.textContent=s.gender;
+  const agse=document.getElementById('adprof-gender-sel');if(agse)agse.textContent=s.genderSelect;
+  const agno=document.getElementById('adprof-gender-none');if(agno)agno.textContent=s.genderNone;
+  const agf=document.getElementById('adprof-gender-f');if(agf)agf.textContent=s.genderF;
+  const agm=document.getElementById('adprof-gender-m');if(agm)agm.textContent=s.genderM;
+  const agnb=document.getElementById('adprof-gender-nb');if(agnb)agnb.textContent=s.genderNB;
+  const ago=document.getElementById('adprof-gender-o');if(ago)ago.textContent=s.genderO;
+  const ahl=document.getElementById('adprof-hobbies-lbl');if(ahl)ahl.textContent=s.hobbies;
+  const ahp=document.getElementById('adprof-hobbies');if(ahp)ahp.placeholder=s.hobbiesPh;
+  const all2=document.getElementById('adprof-location-lbl');if(all2)all2.textContent=s.location;
+  const als=document.getElementById('adprof-location-status');if(als&&als.dataset.state!=='set')als.textContent=s.locationNote;
+  const asb=document.getElementById('adprof-save-btn');if(asb)asb.textContent=s.saveBtn;
+  // Re-render dynamic views if app is active
+  if(me){
+    renderPeople();
+    renderMessages();
+    renderSettings();
+  }
+  renderOnboarding();
+}
+
 function toggleMode(){
   isSignUp=!isSignUp;
-  document.getElementById('asub').textContent=isSignUp?'Create Account':'Sign In';
-  document.getElementById('aswitch').innerHTML=isSignUp?'Already have an account? <b>Sign In</b>':"Don't have an account? <b>Sign Up</b>";
-  document.getElementById('auth-sub').textContent='Define your relationships without the stress';
+  const s=LANG_STRINGS[_lang];
+  document.getElementById('asub').textContent=isSignUp?s.signup:s.signin;
+  document.getElementById('aswitch').innerHTML=isSignUp?s.switchToSignin:s.switchToSignup;
+  document.getElementById('auth-sub').textContent=s.sub;
   document.getElementById('aerr').textContent='';
-  document.getElementById('mutual-note').style.display=isSignUp?'none':'block';
 }
 
 async function authGo(){
   const u=document.getElementById('au').value.trim().toLowerCase();
   const p=document.getElementById('ap').value;
   const errEl=document.getElementById('aerr');
-  if(!u||!p){errEl.textContent='Fill in all fields';return;}
-  if(u.length<2){errEl.textContent='Username too short';return;}
+  if(!u||!p){errEl.textContent=LANG_STRINGS[_lang].fillFields;return;}
+  if(u.length<2){errEl.textContent=LANG_STRINGS[_lang].userShort;return;}
   const btn=document.getElementById('asub');btn.disabled=true;
   try{
     const res=await fetch(API+(isSignUp?'/auth/signup':'/auth/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
@@ -584,9 +1109,8 @@ async function authGo(){
     me=u;myPw=p;
     localStorage.setItem('vb_sess',JSON.stringify({u,p}));
     errEl.textContent='';
-    if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();
     enterApp();
-    if(isSignUp) setTimeout(()=>setTab('settings'),100);
+    if(isSignUp) setTimeout(()=>{goTab('settings',document.getElementById('tab-settings'));openProfileEdit();},100);
     if(isSignUp && !localStorage.getItem('vb_seen_ob_'+u)){
       setTimeout(()=>obOpen(),300);
     }
@@ -595,7 +1119,7 @@ async function authGo(){
 }
 
 function confirmDelete(){
-  if(!confirm('Delete your account? This will permanently remove all your data and cannot be undone.')) return;
+  if(!confirm(L('confirmDeleteMsg'))) return;
   fetch(API+'/auth/delete',{method:'DELETE',headers:apiHeaders()}).then(()=>logout());
 }
 
@@ -613,21 +1137,43 @@ function enterApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').classList.add('show');
   document.getElementById('people-search-wrap').classList.add('show');
-  loadMe();
+  loadMe().then(consumePendingInvite).then(checkPaywall);
   setInterval(loadMe,30000);
   setInterval(pollMessages,8000);
   fetch(API+'/track/open',{method:'POST',headers:apiHeaders()}).catch(()=>{});
   registerPush();
 }
 
+function notificationsEnabled(){return ('Notification' in window)&&Notification.permission==='granted';}
+async function checkNotifButtonVisibility(){
+  // On iOS, permission stays 'granted' even after user disables in Settings.
+  // The push subscription becomes null in that case — use it as the real signal.
+  const btn=document.getElementById('notif-btn-wrap');
+  if(!btn)return;
+  if(!notificationsEnabled()){btn.style.display='';return;}
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){btn.style.display='none';return;}
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    btn.style.display=sub?'none':'';
+  }catch(e){btn.style.display='';}
+}
+async function enableNotifications(){
+  if(!('Notification' in window))return;
+  // Calling requestPermission() triggers the browser/OS's own native
+  // permission dialog directly — same pattern as the location request.
+  const perm=await Notification.requestPermission();
+  if(perm==='granted') await registerPush();
+  if(isSettingsTabActive()) renderSettings();
+  checkNotifButtonVisibility();
+}
 async function registerPush(){
   if(!('serviceWorker' in navigator)||!('PushManager' in window)) return;
+  if(!notificationsEnabled()) return; // never prompt here — only enableNotifications() does that
   try {
     const reg = await navigator.serviceWorker.ready;
     const keyRes = await fetch(API+'/push/vapid-public-key');
     const { publicKey } = await keyRes.json();
-    const perm = await Notification.requestPermission();
-    if(perm !== 'granted') return;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey)
@@ -652,7 +1198,7 @@ function goTab(t,btn){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
   document.getElementById('pane-'+t).classList.add('show');
   btn.classList.add('on');
-  const titles={people:'People',messages:'Messages',settings:'Profile'};
+  const titles={people:L('people'),messages:L('messages'),settings:L('profile')};
   document.getElementById('ntitle').textContent=titles[t];
   document.getElementById('nplus-wrap').style.display=t==='people'?'':'none';
   document.getElementById('ncompose-wrap').style.display=t==='messages'?'':'none';
@@ -667,7 +1213,7 @@ function ini(n){return (n||'?').split(' ').filter(Boolean).map(w=>w[0]).join('')
 function hasThreeConsecutive(contactName,username){const n=contactName.toLowerCase(),u=username.toLowerCase();for(let i=0;i<=n.length-3;i++){if(u.includes(n.slice(i,i+3)))return true;}return false;}
 function scaleLabel(type,idx){return idx!=null?SCALES[type].steps[idx]:null;}
 function scaleColor(type,idx){return idx!=null?SCALES[type].clrs[idx]:'#6b6b80';}
-function getProfile(){return{displayName:_state.displayName||'',photoDataUrl:_state.photoDataUrl||null};}
+function getProfile(){return{displayName:_state.displayName||'',photoDataUrl:_state.photoDataUrl||null,avatarColor:_state.avatarColor||null};}
 
 // Server pre-computes effective indices; fall back to own index if not available
 function effectiveForPerson(p,type){
@@ -699,13 +1245,41 @@ function openAdd(){
   setTimeout(()=>document.getElementById('search-input').focus(),350);
 }
 
+function getInviteLink(){return `${location.origin}/vibes/?invite=${encodeURIComponent(me)}`;}
+async function shareInviteLink(){
+  const link=getInviteLink();
+  const btn=document.getElementById('share-link-btn');
+  if(navigator.share){
+    try{await navigator.share({title:'Vibes',text:'Add me on Vibes!',url:link});return;}catch(e){/* cancelled, fall through to copy */}
+  }
+  try{
+    await navigator.clipboard.writeText(link);
+    const orig=btn.textContent;
+    btn.textContent='Link copied!';
+    setTimeout(()=>{btn.textContent=orig;},1500);
+  }catch(e){
+    prompt('Copy your invite link:',link);
+  }
+}
+async function consumePendingInvite(){
+  const params=new URLSearchParams(location.search);
+  const invite=params.get('invite');
+  if(!invite)return;
+  history.replaceState(null,'',location.pathname);
+  if(invite.toLowerCase()===String(me||'').toLowerCase())return;
+  try{
+    await apiReq('POST','/invite/accept',{fromUsername:invite});
+    await loadMe();
+  }catch(e){console.error('invite accept failed',e);}
+}
+
 async function findFromContacts(){
   if(!('contacts' in navigator))return;
   const el=document.getElementById('search-results');
   try{
     const contacts=await navigator.contacts.select(['name'],{multiple:true});
     if(!contacts.length)return;
-    el.innerHTML=`<div class="search-empty">Searching…</div>`;
+    el.innerHTML=`<div class="search-empty">${L('searching')}</div>`;
     const seen=new Set();const allResults=[];
     for(const c of contacts){
       const name=(c.name||[])[0];if(!name)continue;
@@ -715,13 +1289,13 @@ async function findFromContacts(){
         for(const u of results){if(!seen.has(u.username)&&hasThreeConsecutive(name,u.username)){seen.add(u.username);allResults.push(u);}}
       }
     }
-    if(!allResults.length){el.innerHTML=`<div class="search-empty">No contacts found on Vibes</div>`;return;}
+    if(!allResults.length){el.innerHTML=`<div class="search-empty">${L('noContacts')}</div>`;return;}
     el.innerHTML=allResults.map(u=>{
       let btnHtml;
-      if(u.connected)       btnHtml=`<button class="add-btn connected" disabled>Friends</button>`;
-      else if(u.pending)    btnHtml=`<button class="add-btn sent" onclick="cancelRequest('${u.username}')">Cancel</button>`;
-      else if(u.theyRequested) btnHtml=`<button class="add-btn btn-accept" onclick="acceptFromSearch('${u.username}')">Accept</button>`;
-      else                  btnHtml=`<button class="add-btn" onclick="sendRequest('${u.username}')">Add</button>`;
+      if(u.connected)       btnHtml=`<button class="add-btn connected" disabled>${L('vibeScore')}</button>`;
+      else if(u.pending)    btnHtml=`<button class="add-btn sent" onclick="cancelRequest('${u.username}')">${L('cancelBtn')}</button>`;
+      else if(u.theyRequested) btnHtml=`<button class="add-btn btn-accept" onclick="acceptFromSearch('${u.username}')">${L('acceptBtn')}</button>`;
+      else                  btnHtml=`<button class="add-btn" onclick="sendRequest('${u.username}')">${L('addBtn')}</button>`;
       const name=u.displayName||u.username;
       const avHtml=u.photoDataUrl
         ?`<div class="av av-md"><img src="${esc(u.photoDataUrl)}"/></div>`
@@ -740,13 +1314,13 @@ function renderSearch(){
   clearTimeout(_searchTimeout);
   _searchTimeout=setTimeout(async()=>{
     const results=await apiReq('GET',`/users/search?q=${encodeURIComponent(q)}`);
-    if(!results.length){el.innerHTML=`<div class="search-empty">No users found for "${esc(q)}"</div>`;return;}
+    if(!results.length){el.innerHTML=`<div class="search-empty">${L('noUsers')} "${esc(q)}"</div>`;return;}
     el.innerHTML=results.map(u=>{
       let btnHtml;
-      if(u.connected)       btnHtml=`<button class="add-btn connected" disabled>Friends</button>`;
-      else if(u.pending)    btnHtml=`<button class="add-btn sent" onclick="cancelRequest('${u.username}')">Cancel</button>`;
-      else if(u.theyRequested) btnHtml=`<button class="add-btn btn-accept" onclick="acceptFromSearch('${u.username}')">Accept</button>`;
-      else                  btnHtml=`<button class="add-btn" onclick="sendRequest('${u.username}')">Add</button>`;
+      if(u.connected)       btnHtml=`<button class="add-btn connected" disabled>${L('vibeScore')}</button>`;
+      else if(u.pending)    btnHtml=`<button class="add-btn sent" onclick="cancelRequest('${u.username}')">${L('cancelBtn')}</button>`;
+      else if(u.theyRequested) btnHtml=`<button class="add-btn btn-accept" onclick="acceptFromSearch('${u.username}')">${L('acceptBtn')}</button>`;
+      else                  btnHtml=`<button class="add-btn" onclick="sendRequest('${u.username}')">${L('addBtn')}</button>`;
       const name=u.displayName||u.username;
       const avHtml=u.photoDataUrl
         ?`<div class="av av-md"><img src="${esc(u.photoDataUrl)}"/></div>`
@@ -806,15 +1380,6 @@ async function openDetail(id){
   };
   openSheet('det');
   initSheetSwipe('det',undoDetChanges);
-  // Fetch bio if connected user
-  const bioEl=document.getElementById('det-bio');
-  bioEl.style.display='none';bioEl.textContent='';
-  if(p.sourceUsername){
-    try{
-      const u=await apiReq('GET','/users/'+p.sourceUsername);
-      if(u.bio){bioEl.textContent=u.bio;bioEl.style.display='block';}
-    }catch{}
-  }
 }
 
 async function undoDetChanges(){
@@ -848,11 +1413,11 @@ function renderDetail(p){
   const romanticToggle=theyRemoved
     ?`<div style="display:flex;align-items:center;justify-content:space-between;padding:.2rem .1rem .6rem">
         <span style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">💕 Romantic</span>
-        <span style="font-size:.75rem;color:var(--muted);font-style:italic">removed by them</span>
+        <span style="font-size:.75rem;color:var(--muted);font-style:italic">${L('removedByThem')}</span>
       </div>`
     :`<div style="display:flex;align-items:center;justify-content:space-between;padding:.2rem .1rem .6rem">
-        <span style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">💕 Romantic${mutualNote}</span>
-        <button onclick="togglePersonRomantic('${p.id}')" style="background:none;border:none;font-family:inherit;font-size:.8rem;font-weight:600;color:${showRom?'var(--red)':'#ff375f'};cursor:pointer;padding:.2rem .4rem">${showRom?'Remove':'Add'}</button>
+        <span style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">💕 ${L('romantic')}${mutualNote}</span>
+        <button onclick="togglePersonRomantic('${p.id}')" style="background:none;border:none;font-family:inherit;font-size:.8rem;font-weight:600;color:${showRom?'var(--red)':'#ff375f'};cursor:pointer;padding:.2rem .4rem">${showRom?L('removeBtn'):L('addBtn')}</button>
       </div>`;
   // Check if current user has a dating+ effective romantic score with anyone else
   const DATING_IDX = 3;
@@ -860,9 +1425,9 @@ function renderDetail(p){
   let romanticScaleHtml = '';
   if (showRom) {
     if (myCommitted) {
-      romanticScaleHtml = `<div style="opacity:.45;pointer-events:none">${renderScaleBlock(p,'romantic',true)}</div><div style="font-size:.78rem;color:var(--muted);text-align:center;padding:.2rem .4rem .4rem;font-style:italic">You have a romantic Vibe Score of Dating or higher with another user</div>`;
+      romanticScaleHtml = `<div style="opacity:.45;pointer-events:none">${renderScaleBlock(p,'romantic',true)}</div><div style="font-size:.78rem;color:var(--muted);text-align:center;padding:.2rem .4rem .4rem;font-style:italic">${L('youHaveCommitted')}</div>`;
     } else if (p.theyHaveCommittedRomantic) {
-      romanticScaleHtml = `<div style="opacity:.45;pointer-events:none">${renderScaleBlock(p,'romantic',true)}</div><div style="font-size:.78rem;color:var(--muted);text-align:center;padding:.2rem .4rem .4rem;font-style:italic">This person has a romantic Vibe Score of Dating or higher with another user</div>`;
+      romanticScaleHtml = `<div style="opacity:.45;pointer-events:none">${renderScaleBlock(p,'romantic',true)}</div><div style="font-size:.78rem;color:var(--muted);text-align:center;padding:.2rem .4rem .4rem;font-style:italic">${L('theyHaveCommitted')}</div>`;
     } else {
       romanticScaleHtml = renderScaleBlock(p,'romantic',true);
     }
@@ -872,26 +1437,28 @@ function renderDetail(p){
     '<div style="height:1px;background:var(--sep);margin:.5rem 0"></div>'+
     romanticToggle+
     romanticScaleHtml;
+  document.getElementById('det-ad').innerHTML=planHasAds(_state.plan)?renderAdSlot(p):'';
 }
 
 function renderScaleBlock(p,type,hideHeader){
   const sc=SCALES[type];
+  const steps=L(type==='friend'?'friendSteps':'romanticSteps');
   const idx=type==='friend'?p.friendIndex:p.romanticIndex;
-  const pct=idx!=null?(idx/(sc.steps.length-1))*100:0;
+  const pct=idx!=null?(idx/(steps.length-1))*100:0;
   const col=idx!=null?sc.clrs[idx]:'#6b6b80';
   return `<div class="scale-block">
     ${hideHeader?'':` <div class="scale-hdr">${sc.emoji} ${sc.name}</div>`}
-    <div class="scale-vibe" style="background:${col}22;color:${col}">${idx!=null?sc.steps[idx]:'Tap a dot to rate'}</div>
+    <div class="scale-vibe" style="background:${col}22;color:${col}">${idx!=null?steps[idx]:L('tapDotToRate')}</div>
     <div class="scale-track">
       <div class="scale-line"></div>
       <div class="scale-fill" style="width:${pct}%;background:${col}"></div>
-      <div class="scale-dots">${sc.steps.map((s,i)=>`
+      <div class="scale-dots">${steps.map((s,i)=>`
         <div class="dot${i===idx?' sel':''}"
           style="${i===idx?'background:'+col:(idx!=null&&i<idx?'background:'+sc.clrs[i]:'')}"
           onclick="setIdx('${p.id}','${type}',${i})"></div>`).join('')}
       </div>
     </div>
-    <div class="scale-lbls">${sc.steps.map((s,i)=>`<div class="slbl${i===idx?' on':''}">${s}</div>`).join('')}</div>
+    <div class="scale-lbls">${steps.map((s,i)=>`<div class="slbl${i===idx?' on':''}">${s}</div>`).join('')}</div>
   </div>`;
 }
 
@@ -916,6 +1483,12 @@ function renderPeople(){
   const el=document.getElementById('people-body');
   el.innerHTML='';
 
+  if(planHasAds(_state.plan)){
+    const ad=document.createElement('div');
+    ad.innerHTML=renderAdSlot(null);
+    el.appendChild(ad);
+  }
+
   // Incoming requests section
   if(reqs.length){
     const sec=document.createElement('div');
@@ -926,10 +1499,10 @@ function renderPeople(){
         :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(r.name))}</div>`;
       return `<div class="req-row">
         ${avHtml}
-        <div class="row-info"><div class="row-name">${esc(r.name)}</div><div class="row-sub">${esc(r.fromUsername)} wants to connect</div></div>
+        <div class="row-info"><div class="row-name">${esc(r.name)}</div><div class="row-sub">${esc(r.fromUsername)} ${L('wantsToConnect')}</div></div>
         <div class="req-actions">
-          <button class="req-btn btn-accept" onclick="acceptRequest('${esc(r.fromUsername)}')">Accept</button>
-          <button class="req-btn btn-decline" onclick="declineRequest('${esc(r.fromUsername)}')">Clear</button>
+          <button class="req-btn btn-accept" onclick="acceptRequest('${esc(r.fromUsername)}')">${L('acceptBtn')}</button>
+          <button class="req-btn btn-decline" onclick="declineRequest('${esc(r.fromUsername)}')">${L('clearBtn')}</button>
         </div>
       </div>`;
     }).join('')}</div></div>`;
@@ -941,7 +1514,7 @@ function renderPeople(){
     const sent=sentReqs();
     if(sent.length){
       const sec=document.createElement('div');
-      sec.innerHTML=`<div class="sec"><div class="sec-hdr">Pending (${sent.length})</div>
+      sec.innerHTML=`<div class="sec"><div class="sec-hdr">${L('pendingLabel')} (${sent.length})</div>
       <div class="card-list">${sent.map(r=>{
         const name=r.name||r.toUsername||'?';
         const avHtml=r.photoDataUrl
@@ -949,9 +1522,9 @@ function renderPeople(){
           :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(name))}</div>`;
         return `<div class="req-row">
           ${avHtml}
-          <div class="row-info"><div class="row-name">${esc(name)}</div><div class="row-sub" style="color:var(--muted)">Request sent</div></div>
+          <div class="row-info"><div class="row-name">${esc(name)}</div><div class="row-sub" style="color:var(--muted)">${L('requestSent')}</div></div>
           <div class="req-actions">
-            <button class="req-btn btn-decline" onclick="cancelRequest('${esc(r.toUsername||'')}')">Cancel</button>
+            <button class="req-btn btn-decline" onclick="cancelRequest('${esc(r.toUsername||'')}')">${L('cancelBtn')}</button>
           </div>
         </div>`;
       }).join('')}</div></div>`;
@@ -961,7 +1534,7 @@ function renderPeople(){
 
   if(!all.length){
     const sec=document.createElement('div');
-    sec.innerHTML=`<div class="empty"><div class="empty-ico" style="display:flex;align-items:center;justify-content:center;margin-bottom:.8rem"><svg width="52" height="52" viewBox="0 0 24 24" fill="var(--muted)"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div><div class="empty-ttl">No people yet</div><div class="empty-sub">Tap + to find or add someone</div></div>`;
+    sec.innerHTML=`<div class="empty"><div class="empty-ico" style="display:flex;align-items:center;justify-content:center;margin-bottom:.8rem"><svg width="52" height="52" viewBox="0 0 24 24" fill="var(--muted)"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div><div class="empty-ttl">${L('noPeopleTitle')}</div><div class="empty-sub">${L('noPeopleSub')}</div></div>`;
     el.appendChild(sec);return;
   }
 
@@ -982,9 +1555,8 @@ function renderPeople(){
       ${personAvatarHtml(p,46,17)}
       <div class="row-info">
         <div class="row-name">${esc(p.name)}</div>
-        <div class="row-sub" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">${badges||'<span style="color:var(--muted)">Tap to rate</span>'}${hasMutual?'<span style="color:var(--muted);font-size:.68rem;font-weight:600;letter-spacing:.02em">Vibe Score</span>':''}</div>
+        <div class="row-sub" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">${badges||`<span style="color:var(--muted)">${L('tapToRate')}</span>`}${hasMutual?`<span style="color:var(--muted);font-size:.68rem;font-weight:600;letter-spacing:.02em">${L('vibeScore')}</span>`:''}</div>
       </div>
-      <div class="chevron">›</div>
     </div>`;
   }).join('')+`</div></div>`;
   el.appendChild(peopleSec);
@@ -993,34 +1565,46 @@ function renderPeople(){
 // ── Settings ──────────────────────────────────────────────────────────────────
 function renderSettings(){
   const p=people();
-  const {displayName,photoDataUrl}=getProfile();
+  const {displayName,photoDataUrl,avatarColor}=getProfile();
   const dispName=displayName||me;
   const profAvHtml=photoDataUrl
     ?`<div class="prof-av-wrap" style="width:72px;height:72px"><img src="${esc(photoDataUrl)}"/></div>`
-    :`<div class="prof-av-wrap" style="width:72px;height:72px;font-size:1.7rem">${esc(dispName[0].toUpperCase())}</div>`;
+    :`<div class="prof-av-wrap" style="width:72px;height:72px;font-size:1.7rem;background:${avatarColor||AVATAR_COLORS[0]}">${esc(dispName[0].toUpperCase())}</div>`;
   document.getElementById('settings-body').innerHTML=`
     <div class="sec"><div class="card-list">
       <div style="display:flex;flex-direction:column;align-items:center;padding:1.4rem 1rem 1rem;gap:.4rem">
         ${profAvHtml}
         <div style="font-size:1.05rem;font-weight:700;margin-top:.2rem">${esc(dispName)}</div>
         <div style="font-size:.78rem;color:var(--muted)">${esc(me||'')}</div>
-        <button onclick="openProfileEdit()" style="margin-top:.5rem;background:var(--s2);border:none;color:var(--blue);font-family:inherit;font-size:.85rem;font-weight:600;padding:.45rem 1.1rem;border-radius:20px;cursor:pointer">Edit Profile</button>
+        <button onclick="openProfileEdit()" style="margin-top:.5rem;background:var(--s2);border:none;color:var(--blue);font-family:inherit;font-size:.85rem;font-weight:600;padding:.45rem 1.1rem;border-radius:20px;cursor:pointer">${L('editProfile')}</button>
       </div>
     </div></div>
-    <div class="sec"><div class="sec-hdr">Rating Scales</div>
+    ${_installAvailable?`<div class="sec"><div class="card-list" style="padding:.7rem">
+      <button class="install-btn" style="position:static;transform:none;width:100%;max-width:none;margin:0" onclick="handleInstallClick()">${L('installApp')}</button>
+    </div></div>`:''}
+    <div id="notif-btn-wrap" class="sec" style="${notificationsEnabled()?'display:none':''}"><div class="card-list" style="padding:.7rem">
+      <button class="install-btn" style="position:static;transform:none;width:100%;max-width:none;margin:0" onclick="enableNotifications()">${L('turnOnNotifications')}</button>
+    </div></div>
+    <div class="sec">
     <div class="card-list">
-      <div class="cat-row" style="border-bottom:none">
+      <div class="cat-row">
         <div class="cat-ic" style="background:rgba(255,55,95,.18)">💕</div>
-        <div class="cat-inf"><div class="cat-nm">Romantic</div></div>
+        <div class="cat-inf"><div class="cat-nm">${L('romantic')}</div></div>
         <button class="tog${!isHidden('romantic')?' on':''}" onclick="toggleScale('romantic')"></button>
+      </div>
+      <div class="cat-row" style="border-bottom:none">
+        <div class="cat-ic" style="background:rgba(255,159,10,.18)">🔥</div>
+        <div class="cat-inf"><div class="cat-nm">${L('streaks')}</div></div>
+        <button class="tog${_state.streaksEnabled?' on':''}" onclick="toggleStreaks()"></button>
       </div>
     </div></div>
     <div class="sec"><div class="card-list">
       <div class="row" style="cursor:default;justify-content:center;gap:.6rem">
-        <button class="sign-out" style="margin:0" onclick="logout()">Sign Out</button>
-        <button class="sign-out" style="margin:0" onclick="confirmDelete()">Delete Account</button>
+        <button class="sign-out" style="margin:0" onclick="logout()">${L('signOut')}</button>
+        <button class="sign-out" style="margin:0" onclick="confirmDelete()">${L('deleteAccount')}</button>
       </div>
     </div></div>`;
+  checkNotifButtonVisibility();
 }
 
 // ── Profile ───────────────────────────────────────────────────────────────────
@@ -1063,25 +1647,29 @@ function initSheetSwipe(id,onDismiss){
   document.addEventListener('mouseup',dragEnd);
 }
 
-function updateStreaksToggle(checked){
-  document.getElementById('prof-streaks-track').style.background=checked?'var(--blue)':'var(--s3)';
-  document.getElementById('prof-streaks-thumb').style.transform=checked?'translateX(20px)':'translateX(0)';
+const AVATAR_COLORS=['linear-gradient(135deg,#ff375f,#bf5af2)','linear-gradient(135deg,#ff9f0a,#ff375f)','linear-gradient(135deg,#ffd60a,#ff9f0a)','linear-gradient(135deg,#32d74b,#0a84ff)','linear-gradient(135deg,#0a84ff,#5e5ce6)','linear-gradient(135deg,#bf5af2,#5e5ce6)','linear-gradient(135deg,#64d2ff,#0a84ff)','linear-gradient(135deg,#8e8e93,#48484a)'];
+function renderColorPicker(selected){
+  const picker=document.getElementById('prof-color-picker');
+  picker._selected=selected||AVATAR_COLORS[0];
+  picker.innerHTML=AVATAR_COLORS.map(c=>`<button type="button" onclick="selectAvatarColor('${esc(c)}')" style="-webkit-appearance:none;appearance:none;width:34px;height:34px;flex-shrink:0;border-radius:50%;border:2px solid ${c===picker._selected?'#fff':'transparent'};background:${c};background-clip:padding-box;outline:none;box-shadow:none;cursor:pointer;padding:0;overflow:hidden"></button>`).join('');
+}
+function selectAvatarColor(c){
+  document.getElementById('prof-color-picker')._selected=c;
+  renderColorPicker(c);
+  const av=document.getElementById('prof-edit-av');
+  if(!av._pendingPhoto&&!getProfile().photoDataUrl)av.style.background=c;
 }
 function openProfileEdit(){
   const {displayName,photoDataUrl}=getProfile();
+  const color=_state.avatarColor||AVATAR_COLORS[0];
   const av=document.getElementById('prof-edit-av');
+  av.style.background=color;
   if(photoDataUrl){av.innerHTML=`<img src="${esc(photoDataUrl)}"/>`;}
   else{av.innerHTML=`${(displayName||(me||'?'))[0].toUpperCase()}`;}
   av._pendingPhoto=undefined;
   document.getElementById('prof-displayname').value=displayName;
   document.getElementById('prof-username-lbl').textContent=me;
-  const bioEl=document.getElementById('prof-bio');
-  bioEl.value=_state.bio||'';
-  document.getElementById('prof-bio-count').textContent=`${bioEl.value.length} / 160`;
-  bioEl.oninput=()=>{document.getElementById('prof-bio-count').textContent=`${bioEl.value.length} / 160`;};
-  const streaksEl=document.getElementById('prof-streaks');
-  streaksEl.checked=!!_state.streaksEnabled;
-  updateStreaksToggle(streaksEl.checked);
+  renderColorPicker(color);
   openSheet('prof');
   initSheetSwipe('prof');
 }
@@ -1098,17 +1686,117 @@ function handlePhotoUpload(e){
 }
 async function saveProfile(){
   const displayName=document.getElementById('prof-displayname').value.trim();
-  const bio=document.getElementById('prof-bio').value.trim();
-  const streaksEnabled=document.getElementById('prof-streaks').checked;
+  const avatarColor=document.getElementById('prof-color-picker')._selected;
   const pending=document.getElementById('prof-edit-av')._pendingPhoto;
-  const update={displayName,bio,streaksEnabled};
+  const update={displayName,avatarColor};
   if(pending!==undefined)update.photoDataUrl=pending;
   _state.displayName=displayName;
-  _state.bio=bio;
-  _state.streaksEnabled=streaksEnabled;
+  _state.avatarColor=avatarColor;
   if(pending!==undefined)_state.photoDataUrl=pending;
   await apiReq('PATCH','/me',update);
   closeSheet('prof');renderAll();
+}
+
+// ── Plans ─────────────────────────────────────────────────────────────────────
+let _paywallForced=false;
+function openPlanSheet(forced){
+  _paywallForced=!!forced;
+  document.getElementById('plan-sheet-title').textContent=forced?L('trialEndedPlan'):L('choosePlan');
+  renderPlanCards();
+  openSheet('plan');
+  initSheetSwipe('plan',dismissPaywall);
+}
+function renderPlanCards(){
+  const lPlans=L('plans');
+  document.getElementById('plan-cards').innerHTML=PLANS.map(p=>{
+    const isCurrent=_state.plan===p.key&&!_state.trialActive;
+    const t=lPlans?.[p.key]||{};
+    const name=t.name||p.name;
+    const tagline=t.tagline||p.tagline;
+    const features=t.features||p.features;
+    return `<div class="plan-card${isCurrent?' current':''}">
+      <div class="plan-card-hdr"><span class="plan-card-name">${p.emoji||''} ${esc(name)}</span><span class="plan-card-price">${esc(p.price)}</span></div>
+      <div class="plan-card-tag">${esc(tagline)}</div>
+      <ul class="plan-card-feats">${features.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>
+      <button class="plan-card-btn" ${isCurrent?'disabled':''} onclick="choosePlan('${p.key}')">${isCurrent?L('currentPlan'):L('choosePlanBtn')+' '+esc(name)}</button>
+    </div>`;
+  }).join('');
+}
+function dismissPaywall(){
+  if(_paywallForced&&_state.pendingPaywall) choosePlan('free');
+}
+function closePaywallOverlay(){
+  dismissPaywall();
+  closeSheet('plan');
+}
+function adProfileIncomplete(){
+  const p=_state.adProfile||{};
+  return !p.birthdate||!p.gender||!p.hobbies||!p.lat||!p.lon;
+}
+async function choosePlan(plan){
+  await apiReq('POST','/plan',{plan});
+  _state.plan=plan;_state.pendingPaywall=false;_state.trialActive=false;
+  closeSheet('plan');
+  renderAll();
+  if(planHasAds(plan)&&adProfileIncomplete()){
+    setTimeout(openAdProfileSheet,250);
+  }
+}
+function checkPaywall(){
+  if(_state.pendingPaywall) openPlanSheet(true);
+}
+function openAdProfileSheet(){
+  document.getElementById('adprof-birthdate').value=_state.adProfile?.birthdate||'';
+  document.getElementById('adprof-gender').value=_state.adProfile?.gender||'';
+  document.getElementById('adprof-hobbies').value=_state.adProfile?.hobbies||'';
+  document.getElementById('adprof-error').textContent='';
+  openSheet('adprof');
+  // No swipe-to-dismiss and no overlay-click-to-close — all fields are required,
+  // so the only way out is Save (with everything filled) or denying location.
+  requestAdLocation();
+}
+function requestAdLocation(){
+  const hasLoc=!!(_state.adProfile?.lat&&_state.adProfile?.lon);
+  if(hasLoc){
+    document.getElementById('adprof-location-status').textContent=L('locationShared');document.getElementById('adprof-location-status').dataset.state='set';
+    return;
+  }
+  if(!('geolocation' in navigator)){
+    document.getElementById('adprof-location-status').textContent=L('locationNA');
+    return;
+  }
+  // Calling getCurrentPosition triggers the browser/OS's own native permission
+  // dialog directly — no custom confirmation UI of our own in between.
+  navigator.geolocation.getCurrentPosition(
+    async (pos)=>{
+      const lat=String(pos.coords.latitude),lon=String(pos.coords.longitude);
+      await apiReq('POST','/plan/ad-profile',{lat,lon});
+      _state.adProfile={..._state.adProfile,lat,lon};
+      document.getElementById('adprof-location-status').textContent=L('locationShared');document.getElementById('adprof-location-status').dataset.state='set';
+    },
+    ()=>{
+      // Denied or unavailable — per the deal, send them back to the plans list
+      // rather than silently falling back to any other way of finding location.
+      closeSheet('adprof');
+      openPlanSheet(false);
+    },
+    {timeout:10000}
+  );
+}
+async function saveAdProfile(){
+  const birthdate=document.getElementById('adprof-birthdate').value;
+  const gender=document.getElementById('adprof-gender').value;
+  const hobbies=document.getElementById('adprof-hobbies').value.trim();
+  const hasLoc=!!(_state.adProfile?.lat&&_state.adProfile?.lon);
+  const errEl=document.getElementById('adprof-error');
+  if(!birthdate||!gender||!hobbies||!hasLoc){
+    errEl.textContent=!hasLoc?'Please share your location above first.':'Please fill in every field before saving.';
+    return;
+  }
+  errEl.textContent='';
+  await apiReq('POST','/plan/ad-profile',{birthdate,gender,hobbies});
+  _state.adProfile={..._state.adProfile,birthdate,gender,hobbies};
+  closeSheet('adprof');
 }
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -1128,7 +1816,7 @@ function renderNewMsgList(){
   const connected=people().filter(p=>p.sourceUsername&&(!q||p.name.toLowerCase().includes(q)));
   const el=document.getElementById('newmsg-list');
   if(!connected.length){
-    el.innerHTML=`<div class="search-empty">${q?'No results':'No connections yet'}</div>`;
+    el.innerHTML=`<div class="search-empty">${q?L('noResults'):L('noConnections')}</div>`;
     return;
   }
   el.innerHTML=connected.map(p=>{
@@ -1159,10 +1847,10 @@ async function pollMessages(){
 async function renderMessages(){
   const el=document.getElementById('messages-body');
   let convos;
-  try{convos=await apiReq('GET','/messages');}catch(e){el.innerHTML='<div class="empty"><div class="empty-sub">Couldn\'t load messages</div></div>';return;}
+  try{convos=await apiReq('GET','/messages');}catch(e){el.innerHTML=`<div class="empty"><div class="empty-sub">${L('couldntLoad')}</div></div>`;return;}
   _convos=convos;
   if(!convos.length){
-    el.innerHTML=`<div class="empty"><div class="empty-ico">💬</div><div class="empty-ttl">No messages yet</div><div class="empty-sub">Start a conversation from someone's profile</div></div>`;
+    el.innerHTML=`<div class="empty"><div class="empty-ico">💬</div><div class="empty-ttl">${L('noMsgTitle')}</div><div class="empty-sub">${L('noMsgSub')}</div></div>`;
     return;
   }
   el.innerHTML=`<div class="sec"><div class="card-list">${convos.map(c=>{
@@ -1201,16 +1889,23 @@ async function openChat(username, name, photoDataUrl, streakCount){
   _chatPeer={username,name,photoDataUrl,streakCount:streakCount||0};
   document.getElementById('chat-peer-name').textContent=name;
   const streakEl=document.getElementById('chat-streak-label');
-  if(_state.streaksEnabled&&(streakCount||0)>0){streakEl.textContent='🔥 '+streakCount+' day streak';streakEl.style.display='';}
+  if(_state.streaksEnabled&&(streakCount||0)>0){streakEl.textContent='🔥 '+streakCount+' '+L('dayStreak');streakEl.style.display='';}
   else{streakEl.style.display='none';}
   const avEl=document.getElementById('chat-peer-av');
   if(photoDataUrl){avEl.innerHTML=`<img src="${esc(photoDataUrl)}" style="width:100%;height:100%;object-fit:cover"/>`;avEl.style.background='none';}
   else{avEl.innerHTML=ini(name);avEl.style.background='linear-gradient(135deg,#5e5ce6,#ff375f)';}
   // Show rizz button if romantic effective score is Curious (1) or higher
   const person=people().find(p=>p.sourceUsername===username);
-  const rizzEligible=person&&(person.effectiveRomanticIndex??-1)>=1;
+  const rizzEligible=(_state.plan==='best'||_state.plan==='plus')&&person&&(person.effectiveRomanticIndex??-1)>=1;
   document.getElementById('rizz-btn').style.display=rizzEligible?'':'none';
   document.getElementById('rizz-bar').className='rizz-bar';
+  if(_state.plan==='free'){
+    const adCtx=getAdContext(person);
+    if(adCtx){
+      document.getElementById('rizz-bar').innerHTML=`<div class="rizz-chip" style="cursor:default">${esc(adCtx.emoji+' '+adCtx.text)}</div>`;
+      document.getElementById('rizz-bar').className='rizz-bar show';
+    }
+  }
   document.getElementById('chat-screen').classList.add('show');
   document.getElementById('chat-input').value='';
   await renderChatMessages();
@@ -1282,12 +1977,12 @@ async function renderChatMessages(){
     const bubbleContent=isImg
       ?`<img src="${m.body}" loading="lazy"/>`
       :esc(m.body);
-    const receipt=(mine&&i===lastReadIdx)?`<div class="read-receipt">Read</div>`:'';
+    const receipt=(mine&&i===lastReadIdx)?`<div class="read-receipt">${L('readReceipt')}</div>`:'';
     return `<div class="bubble-wrap ${mine?'mine':'theirs'}">
       <div class="bubble ${mine?'mine':'theirs'}${isImg?' img-bubble':''}">${bubbleContent}</div>
       <div class="bubble-ts">${formatMsgTs(m.ts)}</div>${receipt}
     </div>`;
-  }).join('')||`<div class="empty" style="margin:auto"><div class="empty-ico">👋</div><div class="empty-sub">Say hello!</div></div>`;
+  }).join('')||`<div class="empty" style="margin:auto"><div class="empty-ico">👋</div><div class="empty-sub">${L('sayHello')}</div></div>`;
   if(wasAtBottom||msgs.length===0) el.scrollTop=el.scrollHeight;
 }
 
@@ -1311,39 +2006,20 @@ async function sendChatMessage(){
 async function getRizzSuggestion(){
   if(!_chatPeer) return;
   const bar=document.getElementById('rizz-bar');
-  bar.innerHTML=`<div class="rizz-loading">Getting suggestions…</div>`;
+  bar.innerHTML=`<div class="rizz-loading">${L('gettingSuggestions')}</div>`;
   bar.className='rizz-bar show';
-  // Grab last 10 messages for context
-  let msgs=[];
-  try{msgs=await apiReq('GET','/messages/'+_chatPeer.username);}catch(e){}
-  const recent=msgs.slice(-10).filter(m=>!m.body.startsWith('data:image/'));
-  const history=recent.map(m=>`${m.from===me?'Me':_chatPeer.name}: ${m.body}`).join('\n');
-  const person=people().find(p=>p.sourceUsername===_chatPeer.username);
-  const romanticSteps=['No Attraction','Curious','Talking','Dating','Partner','Soulmate'];
-  const vibeLabel=person&&person.effectiveRomanticIndex!=null?romanticSteps[person.effectiveRomanticIndex]:'Curious';
   try{
-    const res=await fetch('https://api.anthropic.com.proxy.chorus.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':window._anthropicKey||'sk-ant-api03-gu2gohc4sha1Thohpeep7ro9vie1ikai-n0tr3al','anthropic-version':'2023-06-01'},
-      body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:200,
-        messages:[{role:'user',content:`You are helping someone flirt. Their romantic Vibe Score with ${_chatPeer.name} is "${vibeLabel}". Give 3 short, witty, natural message suggestions they could send next. Keep each under 12 words. No quotes, no numbering, just one per line. Recent chat:\n${history||'(no messages yet)'}`}]
-      })
-    });
-    const data=await res.json();
-    const text=data?.content?.[0]?.text||'';
-    const suggestions=text.split('\n').map(s=>s.trim()).filter(s=>s.length>0).slice(0,3);
-    if(!suggestions.length) throw new Error('no suggestions');
+    const {suggestions}=await apiReq('POST','/rizz',{peerUsername:_chatPeer.username});
+    if(!suggestions||!suggestions.length) throw new Error('no suggestions');
     bar.innerHTML=suggestions.map(s=>`<button class="rizz-chip" onclick="useRizz(${JSON.stringify(s)})">${esc(s)}</button>`).join('');
   }catch(e){
-    bar.innerHTML=`<div class="rizz-loading">Couldn't get suggestions, try again</div>`;
+    bar.innerHTML=`<div class="rizz-loading">${L('couldntGetSuggestions')}</div>`;
   }
 }
 
 function useRizz(text){
   const input=document.getElementById('chat-input');
-  input.value=text;
+  input.value=input.value?input.value+' '+text:text;
   input.style.height='auto';
   input.style.height=input.scrollHeight+'px';
   input.focus();
