@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { randomUUID } = require('crypto');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
@@ -24,7 +25,8 @@ const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, "vibes.db");
+const defaultDbDir = process.env.DB_PATH ? path.dirname(process.env.DB_PATH) : (process.env.VERCEL ? os.tmpdir() : __dirname);
+const DB_PATH = process.env.DB_PATH || path.join(defaultDbDir, "vibes.db");
 const HTML_PATH = path.join(__dirname, "index.html");
 // --- Express Middleware ---
 // Enable CORS for all routes (you might want to restrict this in production)
@@ -42,17 +44,45 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const db = new Database(DB_PATH);
-db.exec(`PRAGMA journal_mode = WAL;`);
+let db;
+let dbInitialized = false;
+let dbPromise;
 
-// Create tables
-db.exec(`
+// Initialize DB promise immediately
+async function initializeDb() {
+  if (!dbInitialized) {
+    db = await setupDb();
+    dbInitialized = true;
+  }
+  return db;
+}
+
+dbPromise = initializeDb();
+
+// Middleware to ensure DB is ready before handling requests
+app.use((req, res, next) => {
+  if (dbInitialized) {
+    next();
+  } else {
+    dbPromise.then(() => next()).catch((err) => {
+      console.error('DB initialization error:', err);
+      res.status(500).json({ error: 'Database initialization failed' });
+    });
+  }
+});
+
+
+async function setupDb() {
+  db = await initDb(DB_PATH);
+  db.exec(`PRAGMA journal_mode = WAL;`);
+
+  // Create tables
+  db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   username TEXT PRIMARY KEY,
   password TEXT NOT NULL,
   display_name TEXT DEFAULT '',
   photo_data_url TEXT,
-  bio TEXT DEFAULT '',
   streaks_enabled INTEGER DEFAULT 0,
   hidden_scales TEXT DEFAULT '[]',
   avatar_color TEXT,
@@ -111,6 +141,20 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_notif_to ON notifications(to_user);
+
+CREATE TABLE IF NOT EXISTS presence (
+  username TEXT PRIMARY KEY,
+  status TEXT DEFAULT 'away',
+  last_seen INTEGER NOT NULL,
+  last_active INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS typing_indicators (
+  username TEXT NOT NULL,
+  peer TEXT NOT NULL,
+  typing_at INTEGER NOT NULL,
+  PRIMARY KEY (username, peer)
+);
 `);
 try { db.exec(`ALTER TABLE users ADD COLUMN avatar_color TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'best'`); } catch (e) {}
@@ -126,13 +170,10 @@ try { db.exec(`ALTER TABLE users ADD COLUMN ad_lon TEXT`); } catch (e) {}
 
 const now = () => Math.floor(Date.now() / 1000);
 
-// Helper for preparing statements to avoid re-compiling queries with better-sqlite3
-const statements = new Map();
+// Helper for preparing statements
 function prepare(query) {
-    if (!statements.has(query)) {
-        statements.set(query, db.prepare(query));
-    }
-    return statements.get(query);
+    return db.prepare(query);
+
 }
 
 function isBcryptHash(s) {
@@ -510,7 +551,6 @@ app.patch("/vibes-api/me", (req, res) => {
     const params = [];
     if ("displayName" in body) { updates.push("display_name = ?"); params.push(String(body.displayName || "")); }
     if ("photoDataUrl" in body) { updates.push("photo_data_url = ?"); params.push(body.photoDataUrl || null); }
-    if ("bio" in body) { updates.push("bio = ?"); params.push(String(body.bio || "")); }
     if ("streaksEnabled" in body) { updates.push("streaks_enabled = ?"); params.push(body.streaksEnabled ? 1 : 0); }
     if ("avatarColor" in body) { updates.push("avatar_color = ?"); params.push(body.avatarColor || null); }
     if ("hiddenScales" in body) { updates.push("hidden_scales = ?"); params.push(JSON.stringify(body.hiddenScales || [])); }
@@ -844,7 +884,18 @@ app.use("/vibes-api", (req, res) => {
   res.status(404).json({ error: "API endpoint not found" });
 });
 // --- Start the Server ---
-app.listen(PORT, () => {
-    console.log(`Vibes backend listening on http://localhost:${PORT}`);
-    console.log(`DB at ${DB_PATH}`);
-});
+if (require.main === module) {
+  dbPromise.then(() => {
+    app.listen(PORT, () => {
+        console.log(`Vibes backend listening on http://localhost:${PORT}`);
+      console.log(`DB at ${DB_PATH}`);
+    });
+  }).catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = app;
+
+
