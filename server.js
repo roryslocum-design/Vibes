@@ -473,22 +473,29 @@ app.get('/vibes/manifest.json', (req, res) => {
       ],
     });
 });
-app.get('/vibes/icon.svg', (req, res) => {
-    res.type('image/svg+xml').send(ICON_SVG);
-});
-app.get('/vibes/icon-192.png', async (req, res) => {
+// Icon routes — served at both / and /vibes/ for compatibility
+for (const prefix of ['', '/vibes']) {
+  app.get(prefix + '/icon.svg', (req, res) => res.type('image/svg+xml').send(ICON_SVG));
+  app.get(prefix + '/icon-192.png', async (req, res) => {
+    if (!sharp) return res.status(404).end();
+    try { res.type('image/png').send(await getIconPng(ICON_SVG, 192)); }
+    catch (e) { res.status(500).end(); }
+  });
+  app.get(prefix + '/icon-512.png', async (req, res) => {
+    if (!sharp) return res.status(404).end();
+    try { res.type('image/png').send(await getIconPng(ICON_SVG, 512)); }
+    catch (e) { res.status(500).end(); }
+  });
+  app.get(prefix + '/icon-512-maskable.png', async (req, res) => {
+    if (!sharp) return res.status(404).end();
+    try { res.type('image/png').send(await getIconPng(ICON_SVG_MASKABLE, 512)); }
+    catch (e) { res.status(500).end(); }
+  });
+}
+// iOS uses apple-touch-icon.png specifically
+app.get(['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png'], async (req, res) => {
   if (!sharp) return res.status(404).end();
-  try { res.type('image/png').send(await getIconPng(ICON_SVG, 192)); }
-  catch (e) { res.status(500).end(); }
-});
-app.get('/vibes/icon-512.png', async (req, res) => {
-  if (!sharp) return res.status(404).end();
-  try { res.type('image/png').send(await getIconPng(ICON_SVG, 512)); }
-  catch (e) { res.status(500).end(); }
-});
-app.get('/vibes/icon-512-maskable.png', async (req, res) => {
-  if (!sharp) return res.status(404).end();
-  try { res.type('image/png').send(await getIconPng(ICON_SVG_MASKABLE, 512)); }
+  try { res.type('image/png').send(await getIconPng(ICON_SVG, 180)); }
   catch (e) { res.status(500).end(); }
 });
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vibes-v2';
+const CACHE_NAME = 'vibes-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -62,7 +62,23 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Static assets - cache first, fallback to network
+  // HTML navigation — network first so new deploys reach users immediately
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then(r => r || new Response('Offline', { status: 503 })))
+    );
+    return;
+  }
+
+  // Other static assets — cache first, fallback to network
   event.respondWith(
     caches.match(event.request)
       .then(response => {
@@ -71,7 +87,6 @@ self.addEventListener('fetch', event => {
         }
         return fetch(event.request)
           .then(response => {
-            // Cache new requests
             if (!response || response.status !== 200 || response.type === 'error') {
               return response;
             }
