@@ -430,7 +430,7 @@ function computeStreak(a, b) {
 app.get(['/', '/vibes', '/vibes/', '/vibes/index.html'], (req, res) => {
     try {
         const html = fs.readFileSync(HTML_PATH, "utf8");
-        res.type('text/html; charset=utf-8').send(html);
+        res.set('Cache-Control', 'no-store').type('text/html; charset=utf-8').send(html);
     } catch (error) {
         console.error("Error reading index.html:", error);
         res.status(500).send("Error loading application.");
@@ -443,10 +443,8 @@ app.get(['/relations', '/relations/', '/relations/index.html'], (req, res) => {
 });
 
 // Manifest / icon stubs
-// V drawn as a path so it renders correctly on Linux (no system fonts needed)
-const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff375f"/><stop offset=".5" stop-color="#bf5af2"/><stop offset="1" stop-color="#0a84ff"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#000"/><path d="M13 17 L32 50 L51 17" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
-// Maskable: full-bleed background, V kept within 80% safe zone
-const ICON_SVG_MASKABLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff375f"/><stop offset=".5" stop-color="#bf5af2"/><stop offset="1" stop-color="#0a84ff"/></linearGradient></defs><rect width="64" height="64" fill="#000"/><path d="M17 20 L32 46 L47 20" stroke="url(#g)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><defs><linearGradient id="g" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#ff375f"/><stop offset="50%" stop-color="#bf5af2"/><stop offset="100%" stop-color="#0a84ff"/></linearGradient><clipPath id="v"><polygon points="27,20 62,20 96,172"/><polygon points="130,20 165,20 96,172"/></clipPath></defs><rect width="192" height="192" rx="42" fill="#000"/><rect width="192" height="192" fill="url(#g)" clip-path="url(#v)"/></svg>`;
+const ICON_SVG_MASKABLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><defs><linearGradient id="g" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#ff375f"/><stop offset="50%" stop-color="#bf5af2"/><stop offset="100%" stop-color="#0a84ff"/></linearGradient><clipPath id="v"><polygon points="35,28 70,28 96,166"/><polygon points="122,28 157,28 96,166"/></clipPath></defs><rect width="192" height="192" fill="#000"/><rect width="192" height="192" fill="url(#g)" clip-path="url(#v)"/></svg>`;
 
 let sharp = null;
 try { sharp = require('sharp'); } catch (e) {}

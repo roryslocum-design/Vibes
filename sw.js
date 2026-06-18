@@ -1,124 +1,68 @@
-const CACHE_NAME = 'vibes-v3';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-];
+const CACHE_NAME = 'vibes-v4';
 
-// Install event - cache essential files
+// Install — skip waiting immediately so this SW activates without delay
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache).catch(err => {
-          // If some URLs fail to cache (e.g., dynamic content), continue anyway
-          console.warn('Some URLs failed to cache during install:', err);
-        });
-      })
-  );
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate — delete ALL old caches, claim clients, then navigate each open window
+// to force a fresh HTML load (bypasses any stale cached page content)
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys()
+      .then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(clients => Promise.all(clients.map(client => client.navigate(client.url))))
   );
-  self.clients.claim();
 });
 
-// Fetch event - network-first strategy for API calls, cache-first for static assets
+// Fetch — HTML is always fetched from network (never cached), other assets cache-first
 self.addEventListener('fetch', event => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') {
+  if (event.request.method !== 'GET') return;
+
+  // Never cache HTML — always serve fresh from network so deploys are instant
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(fetch(event.request).catch(() => new Response('Offline', { status: 503 })));
     return;
   }
 
-  // API calls - network first, fallback to cache
+  // API calls — network only (no caching)
   if (event.request.url.includes('/vibes-api/')) {
     event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          // Clone the response before caching
-          const clonedResponse = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, clonedResponse);
-          });
-          return response;
-        })
-        .catch(() => {
-          return caches.match(event.request)
-            .then(response => response || new Response('Offline - API not available', { status: 503 }));
-        })
+      fetch(event.request).catch(() => new Response('Offline', { status: 503 }))
     );
     return;
   }
 
-  // HTML navigation — network first so new deploys reach users immediately
-  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request).then(r => r || new Response('Offline', { status: 503 })))
-    );
-    return;
-  }
-
-  // Other static assets — cache first, fallback to network
+  // Static assets (JS, CSS, images) — cache first, update in background
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
+    caches.match(event.request).then(cached => {
+      const network = fetch(event.request).then(res => {
+        if (res && res.status === 200 && res.type !== 'error') {
+          caches.open(CACHE_NAME).then(c => c.put(event.request, res.clone()));
         }
-        return fetch(event.request)
-          .then(response => {
-            if (!response || response.status !== 200 || response.type === 'error') {
-              return response;
-            }
-            const clonedResponse = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, clonedResponse);
-            });
-            return response;
-          })
-          .catch(() => {
-            return new Response('Offline - Resource not available', { status: 503 });
-          });
-      })
+        return res;
+      });
+      return cached || network;
+    })
   );
 });
 
-// Handle messages from clients
+// Messages from page
 self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// Push notifications for incoming messages
+// Push notifications
 self.addEventListener('push', event => {
   let data = { title: 'Vibes', body: 'New message' };
   try { data = event.data.json(); } catch (e) {}
   event.waitUntil(
     self.registration.showNotification(data.title || 'Vibes', {
       body: data.body || 'New message',
-      icon: '/manifest.json',
-      badge: '/manifest.json',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
       tag: data.tag || 'vibes-msg',
       data: data.data || {},
       renotify: true
@@ -130,9 +74,7 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      for (const c of list) {
-        if (c.url && 'focus' in c) return c.focus();
-      }
+      for (const c of list) { if (c.url && 'focus' in c) return c.focus(); }
       if (clients.openWindow) return clients.openWindow('/');
     })
   );

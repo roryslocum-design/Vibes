@@ -12,6 +12,20 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/vibes/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/vibes/icon-512.png">
   <title>Vibes</title>
+  <script>
+  // Clear stale service worker caches before anything else runs.
+  // If old caches exist that don't include vibes-v4, nuke them and reload.
+  if ('serviceWorker' in navigator && 'caches' in window) {
+    caches.keys().then(keys => {
+      if (keys.length > 0 && !keys.includes('vibes-v4')) {
+        Promise.all([
+          ...keys.map(k => caches.delete(k)),
+          navigator.serviceWorker.getRegistrations().then(rs => Promise.all(rs.map(r => r.unregister())))
+        ]).then(() => location.reload());
+      }
+    });
+  }
+  </script>
   <style>
     :root {
       --bg:#000;--s1:#1c1c1e;--s2:#2c2c2e;--s3:#3a3a3c;
@@ -232,8 +246,8 @@
     .tab-badge{position:absolute;top:6px;right:calc(50% - 28px);background:var(--red);color:#fff;font-size:.58rem;font-weight:800;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #1c1c1e;}
 
     /* CHAT */
-    #chat-screen{position:fixed;inset:0;background:var(--bg);z-index:300;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);}
-    #chat-screen.show{transform:translateX(0);}
+    #chat-screen{position:fixed;inset:0;background:var(--bg);z-index:300;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);pointer-events:none;}
+    #chat-screen.show{transform:translateX(0);pointer-events:auto;}
     .chat-nav{display:flex;align-items:center;padding:calc(env(safe-area-inset-top,0px) + .7rem) 1rem .7rem;gap:.7rem;border-bottom:.5px solid var(--sep);flex-shrink:0;background:var(--bg);}
     .chat-back{background:none;border:none;color:var(--blue);font-size:1rem;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding:0;}
     .chat-back:active{opacity:.7;}
@@ -283,7 +297,10 @@
     .expiry-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--sep);outline:none;cursor:pointer;}
     .expiry-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:var(--blue);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4);}
     .expiry-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--blue);cursor:pointer;border:none;}
-    .expiry-labels{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);}
+    .expiry-labels{position:relative;height:1.1rem;font-size:.7rem;color:var(--muted);}
+    .expiry-labels span{position:absolute;transform:translateX(-50%);}
+    .expiry-labels span:first-child{transform:translateX(0);}
+    .expiry-labels span:last-child{transform:translateX(-100%);}
     .expiry-note{font-size:.78rem;color:var(--muted);text-align:center;line-height:1.4;}
     .expiry-save-btn{background:var(--blue);color:#fff;border:none;border-radius:14px;padding:.8rem;font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;width:100%;}
     .expiry-save-btn:active{opacity:.8;}
@@ -474,7 +491,13 @@
     <div class="expiry-sheet-title" id="expiry-sheet-title">Chat Memory</div>
     <div class="expiry-slider-wrap">
       <input type="range" class="expiry-slider" id="expiry-slider" min="0" max="200" step="1" value="0" oninput="onExpirySlide(this.value)"/>
-      <div class="expiry-labels"><span>Indefinite</span><span>30d</span><span>7d</span><span>1d</span><span>1hr</span><span>1min</span></div>
+      <div class="expiry-labels">
+        <span style="left:0%">Indefinite</span>
+        <span style="left:14%">7d</span>
+        <span style="left:32%">1d</span>
+        <span style="left:62%">1hr</span>
+        <span style="left:100%">1min</span>
+      </div>
     </div>
     <div class="expiry-note" id="expiry-note"></div>
     <button class="expiry-save-btn" onclick="saveExpiry()">Save</button>
@@ -1610,12 +1633,13 @@ function renderPeople(){
     const sec=document.createElement('div');
     sec.innerHTML=`<div class="sec"><div class="sec-hdr">Requests (${reqs.length})</div>
     <div class="card-list">${reqs.map(r=>{
+      const rName=r.fromName||r.name||r.fromUsername;
       const avHtml=r.photoDataUrl
         ?`<div class="av av-md">${mediaElement(r.photoDataUrl)}</div>`
-        :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(r.name))}</div>`;
+        :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(rName))}</div>`;
       return `<div class="req-row">
         ${avHtml}
-        <div class="row-info"><div class="row-name">${esc(r.name)}</div><div class="row-sub">${esc(r.fromUsername)} ${L('wantsToConnect')}</div></div>
+        <div class="row-info"><div class="row-name">${esc(rName)}</div><div class="row-sub">${esc(r.fromUsername)} ${L('wantsToConnect')}</div></div>
         <div class="req-actions">
           <button class="req-btn btn-accept" onclick="acceptRequest('${esc(r.fromUsername)}')">${L('acceptBtn')}</button>
           <button class="req-btn btn-decline" onclick="declineRequest('${esc(r.fromUsername)}')">${L('clearBtn')}</button>
@@ -2213,6 +2237,31 @@ function updateExpiryBanner(){
   banner.style.display='flex';
   txt.textContent=`Messages disappear after ${expiryDisplay(effectiveTtl)}`;
 }
+function updateExpiryBenchmarks(minPos){
+  const ALL_MARKS=[
+    {label:'Indefinite',pos:0},
+    {label:'7d',secs:7*86400},
+    {label:'1d',secs:86400},
+    {label:'1hr',secs:3600},
+    {label:'1min',pos:200},
+  ];
+  const labelsEl=document.querySelector('.expiry-labels');
+  if(!labelsEl) return;
+  const maxPos=EXPIRY_SLIDER_STEPS;
+  const range=maxPos-minPos;
+  let marks=ALL_MARKS.map(m=>({label:m.label,pos:m.pos!==undefined?m.pos:secsToSlider(m.secs)}))
+    .filter(m=>m.pos>=minPos);
+  // Insert peer cap as leftmost label if it doesn't coincide with an existing mark
+  if(minPos>0){
+    const peerLabel=expiryDisplay(sliderToSecs(minPos));
+    if(!marks.find(m=>m.pos===minPos)) marks.unshift({label:peerLabel,pos:minPos});
+  }
+  labelsEl.innerHTML=marks.map((m,i)=>{
+    const pct=range===0?0:(m.pos-minPos)/range*100;
+    const xform=i===0?'translateX(0)':i===marks.length-1?'translateX(-100%)':'translateX(-50%)';
+    return `<span style="left:${pct.toFixed(1)}%;transform:${xform}">${m.label}</span>`;
+  }).join('');
+}
 function openExpirySheet(){
   const sheet=document.getElementById('expiry-sheet');
   const slider=document.getElementById('expiry-slider');
@@ -2220,10 +2269,11 @@ function openExpirySheet(){
   slider.min=0;
   slider.max=EXPIRY_SLIDER_STEPS;
   slider.step=1;
-  // If peer has a limit, slider can't go below their position (shorter = higher position number)
   const {peerExpiry}=_chatExpiry;
-  if(peerExpiry!==null) slider.min=secsToSlider(peerExpiry);
+  const minPos=peerExpiry!==null?secsToSlider(peerExpiry):0;
+  slider.min=minPos;
   slider.value=secsToSlider(_chatExpiry.myExpiry);
+  updateExpiryBenchmarks(minPos);
   onExpirySlide(slider.value);
   sheet.classList.add('open');
 }
@@ -2243,9 +2293,9 @@ function onExpirySlide(val){
   if(!note) return;
   const {peerExpiry}=_chatExpiry;
   if(secs===null){
-    note.textContent='Messages will be kept forever.'+(peerExpiry!==null?` Your contact set ${expiryDisplay(peerExpiry)} — you can go up to that.`:'');
+    note.textContent=peerExpiry!==null?`Your contact set ${expiryDisplay(peerExpiry)} — you can go up to that.`:'';
   } else {
-    note.textContent=`Messages will disappear after ${label}.`+(peerExpiry!==null&&peerExpiry<(rounded||secs)?` Your contact set ${expiryDisplay(peerExpiry)}, so that's the effective limit.`:'');
+    note.textContent=peerExpiry!==null&&peerExpiry<(rounded||secs)?`Your contact set ${expiryDisplay(peerExpiry)}, so that's the effective limit.`:'';
   }
 }
 async function saveExpiry(){
