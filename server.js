@@ -193,6 +193,7 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   PRIMARY KEY (username, endpoint)
 );
 `);
+try { db.exec(`ALTER TABLE people ADD COLUMN chat_expiry INTEGER DEFAULT NULL`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN avatar_color TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'best'`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN trial_active INTEGER DEFAULT 1`); } catch (e) {}
@@ -840,12 +841,67 @@ app.get("/vibes-api/messages/:peer", (req, res) => {
   try {
     const me = req.me;
     const peer = decodeURIComponent(req.params.peer);
+    // Get both sides' expiry settings
+    const myRow = prepare("SELECT chat_expiry FROM people WHERE owner = ? AND source_username = ?").get(me, peer);
+    const peerRow = prepare("SELECT chat_expiry FROM people WHERE owner = ? AND source_username = ?").get(peer, me);
+    const myExpiry = myRow ? myRow.chat_expiry : null;
+    const peerExpiry = peerRow ? peerRow.chat_expiry : null;
+    // Effective TTL = shortest (most restrictive) of the two
+    let effectiveTtl = null;
+    if (myExpiry !== null && peerExpiry !== null) effectiveTtl = Math.min(myExpiry, peerExpiry);
+    else if (myExpiry !== null) effectiveTtl = myExpiry;
+    else if (peerExpiry !== null) effectiveTtl = peerExpiry;
+    // Delete expired messages if TTL is set
+    if (effectiveTtl !== null) {
+      const cutoff = now() - effectiveTtl;
+      prepare("DELETE FROM messages WHERE ((from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?)) AND ts < ?").run(me, peer, peer, me, cutoff);
+    }
     const msgs = prepare("SELECT * FROM messages WHERE (from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?) ORDER BY ts ASC").all(me, peer, peer, me);
     prepare("UPDATE messages SET read = 1 WHERE from_user = ? AND to_user = ?").run(peer, me);
-    res.json(msgs.map((m) => ({ id: m.id, from: m.from_user, to: m.to_user, body: m.body, ts: m.ts, read: !!m.read })));
+    res.json({
+      messages: msgs.map((m) => ({ id: m.id, from: m.from_user, to: m.to_user, body: m.body, ts: m.ts, read: !!m.read })),
+      myExpiry,
+      peerExpiry,
+      effectiveTtl
+    });
   } catch (e) {
     console.error(`Error in /vibes-api/messages/${req.params.peer} GET:`, e);
     res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
+app.put("/vibes-api/messages/:peer/expiry", (req, res) => {
+  try {
+    const me = req.me;
+    const peer = decodeURIComponent(req.params.peer);
+    const { expiry } = req.body; // seconds or null
+    const allowed = [null, 3600, 86400, 604800, 2592000];
+    if (!allowed.includes(expiry === null ? null : Number(expiry))) return res.status(400).json({ error: "Invalid expiry" });
+    const val = expiry === null ? null : Number(expiry);
+    const row = prepare("SELECT id FROM people WHERE owner = ? AND source_username = ?").get(me, peer);
+    if (!row) return res.status(403).json({ error: "Not connected" });
+    prepare("UPDATE people SET chat_expiry = ? WHERE owner = ? AND source_username = ?").run(val, me, peer);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Notify peer that you copied/saved something in the chat
+app.post("/vibes-api/messages/:peer/notify-action", (req, res) => {
+  try {
+    const me = req.me;
+    const peer = decodeURIComponent(req.params.peer);
+    const { action } = req.body; // 'screenshot' | 'copy' | 'save'
+    const sender = prepare("SELECT display_name FROM users WHERE username = ?").get(me);
+    const senderName = (sender && sender.display_name) || me;
+    const body = action === 'copy' ? `${senderName} copied a message` : action === 'save' ? `${senderName} saved a photo` : `${senderName} took a screenshot`;
+    sendPushToUser(peer, { title: '👁 Vibes', body, tag: `action-${me}-${action}`, data: {} });
+    // Also store as a system message so it shows in chat even without push
+    prepare("INSERT INTO messages (from_user, to_user, body, ts, read) VALUES (?, ?, ?, ?, 0)").run('__system__', peer, JSON.stringify({ type: 'action', actor: me, actorName: senderName, action }), now());
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

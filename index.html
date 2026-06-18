@@ -267,6 +267,25 @@
     .read-receipt{font-size:.62rem;color:var(--muted);margin-top:.15rem;padding:0 .2rem;}
     .rizz-bar{padding:.5rem 1rem .2rem;display:none;gap:.5rem;flex-wrap:wrap;}
     .rizz-bar.show{display:flex;}
+    .chat-expiry-banner{display:flex;align-items:center;gap:.5rem;padding:.45rem 1rem;font-size:.78rem;color:var(--muted);border-bottom:.5px solid var(--sep);background:var(--bg);flex-shrink:0;}
+    .chat-expiry-banner svg{flex-shrink:0;opacity:.7;}
+    .chat-gear-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:.2rem;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .15s;}
+    .chat-gear-btn:active{background:var(--card);}
+    .expiry-sheet{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none;opacity:0;transition:opacity .25s;}
+    .expiry-sheet.open{pointer-events:all;opacity:1;}
+    .expiry-sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.5);}
+    .expiry-sheet-card{position:relative;background:var(--card);border-radius:20px 20px 0 0;padding:1.2rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:1rem;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);}
+    .expiry-sheet.open .expiry-sheet-card{transform:translateY(0);}
+    .expiry-sheet-title{font-size:1rem;font-weight:700;text-align:center;}
+    .expiry-slider-wrap{display:flex;flex-direction:column;gap:.6rem;}
+    .expiry-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--sep);outline:none;cursor:pointer;}
+    .expiry-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:var(--blue);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4);}
+    .expiry-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--blue);cursor:pointer;border:none;}
+    .expiry-labels{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);}
+    .expiry-note{font-size:.78rem;color:var(--muted);text-align:center;line-height:1.4;}
+    .expiry-save-btn{background:var(--blue);color:#fff;border:none;border-radius:14px;padding:.8rem;font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;width:100%;}
+    .expiry-save-btn:active{opacity:.8;}
+    .action-bubble{background:rgba(255,214,10,.13);border:1px solid rgba(255,214,10,.3);border-radius:12px;padding:.35rem .75rem;font-size:.75rem;color:#ffcc00;text-align:center;margin:.4rem auto;max-width:260px;}
     .rizz-chip{background:linear-gradient(135deg,rgba(255,55,95,.18),rgba(191,90,242,.18));border:1px solid rgba(255,55,95,.35);color:var(--text);border-radius:18px;padding:.45rem .85rem;font-size:.82rem;cursor:pointer;font-family:inherit;text-align:left;line-height:1.3;}
     .rizz-chip:active{opacity:.7;}
     .rizz-loading{color:var(--muted);font-size:.82rem;padding:.45rem .2rem;font-style:italic;}
@@ -436,8 +455,29 @@
       <div id="chat-streak-label" style="font-size:.72rem;font-weight:700;color:#ff9f0a;display:none"></div>
     </div>
     <div id="chat-peer-av" style="width:32px;height:32px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;color:#fff;background:linear-gradient(135deg,#5e5ce6,#ff375f);flex-shrink:0"></div>
+    <button class="chat-gear-btn" onclick="openExpirySheet()" title="Chat memory settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+  <div class="chat-expiry-banner" id="chat-expiry-banner" style="display:none">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span id="chat-expiry-banner-text"></span>
   </div>
   <div class="chat-messages" id="chat-messages"></div>
+
+<!-- EXPIRY SETTINGS SHEET -->
+<div class="expiry-sheet" id="expiry-sheet" onclick="if(event.target===this||event.target.classList.contains('expiry-sheet-bg'))closeExpirySheet()">
+  <div class="expiry-sheet-bg"></div>
+  <div class="expiry-sheet-card">
+    <div class="expiry-sheet-title">⏳ Chat Memory</div>
+    <div class="expiry-slider-wrap">
+      <input type="range" class="expiry-slider" id="expiry-slider" min="0" max="4" step="1" value="0" oninput="onExpirySlide(this.value)"/>
+      <div class="expiry-labels" id="expiry-labels"></div>
+    </div>
+    <div class="expiry-note" id="expiry-note"></div>
+    <button class="expiry-save-btn" onclick="saveExpiry()">Save</button>
+  </div>
+</div>
   <div class="rizz-bar" id="rizz-bar"></div>
   <div class="chat-input-wrap">
     <button class="chat-img-btn" onclick="document.getElementById('chat-img-input').click()">
@@ -1872,6 +1912,14 @@ async function saveAdProfile(){
 // ── Messages ──────────────────────────────────────────────────────────────────
 let _convos=[];
 let _chatPeer=null;
+let _chatExpiry={myExpiry:null,peerExpiry:null,effectiveTtl:null};
+const EXPIRY_OPTS=[
+  {label:'Indefinite',secs:null},
+  {label:'30 days',secs:2592000},
+  {label:'7 days',secs:604800},
+  {label:'1 day',secs:86400},
+  {label:'1 hour',secs:3600},
+];
 let _chatPollTimer=null;
 
 function openNewMessage(){
@@ -2082,8 +2130,14 @@ async function renderChatMessages(){
   if(!_chatPeer) return;
   const el=document.getElementById('chat-messages');
   const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;
-  let msgs;
-  try{msgs=await apiReq('GET','/messages/'+_chatPeer.username);}catch(e){return;}
+  let data;
+  try{data=await apiReq('GET','/messages/'+_chatPeer.username);}catch(e){return;}
+  // Support old array format and new object format
+  const msgs=Array.isArray(data)?data:(data.messages||[]);
+  if(!Array.isArray(data)){
+    _chatExpiry={myExpiry:data.myExpiry??null,peerExpiry:data.peerExpiry??null,effectiveTtl:data.effectiveTtl??null};
+    updateExpiryBanner();
+  }
   // Update unread badge
   const convos=await apiReq('GET','/messages').catch(()=>null);
   if(convos){
@@ -2096,12 +2150,20 @@ async function renderChatMessages(){
   // Find index of last read sent message for read receipt
   let lastReadIdx=-1;
   msgs.forEach((m,i)=>{if(m.from===me&&m.read)lastReadIdx=i;});
-  
+
   let html=msgs.map((m,i)=>{
+    // System action notification
+    if(m.from==='__system__'){
+      try{
+        const d=JSON.parse(m.body);
+        const icons={copy:'📋',save:'💾',screenshot:'📸'};
+        return `<div class="action-bubble">${icons[d.action]||'👁'} ${esc(d.actorName)} ${d.action==='copy'?'copied a message':d.action==='save'?'saved a photo':'took a screenshot'}</div>`;
+      }catch(e){return '';}
+    }
     const mine=m.from===me;
     const isImg=m.body.startsWith('data:image/');
     const bubbleContent=isImg
-      ?`<img src="${m.body}" loading="lazy"/>`
+      ?`<img src="${m.body}" loading="lazy" onclick="chatImgTap(this)"/>`
       :esc(m.body);
     const receipt=(mine&&i===lastReadIdx)?`<div class="read-receipt">${L('readReceipt')}</div>`:'';
     return `<div class="bubble-wrap ${mine?'mine':'theirs'}">
@@ -2109,7 +2171,92 @@ async function renderChatMessages(){
       <div class="bubble-ts">${formatMsgTs(m.ts)}${receipt}</div>
     </div>`;
   }).join('')||`<div class="empty" style="margin:auto"><div class="empty-ico">👋</div><div class="empty-sub">${L('sayHello')}</div></div>`;
+  el.innerHTML=html;
   if(wasAtBottom||msgs.length===0) el.scrollTop=el.scrollHeight;
+  // Attach copy listener to chat messages area (once)
+  el.oncopycapture=null;
+  el.addEventListener('copy',onChatCopy,{once:false});
+}
+
+function expiryLabel(secs){
+  if(secs===null||secs===undefined) return 'Indefinite';
+  if(secs<=3600) return '1 hour';
+  if(secs<=86400) return '1 day';
+  if(secs<=604800) return '7 days';
+  if(secs<=2592000) return '30 days';
+  return 'Indefinite';
+}
+function updateExpiryBanner(){
+  const banner=document.getElementById('chat-expiry-banner');
+  const txt=document.getElementById('chat-expiry-banner-text');
+  if(!banner||!txt) return;
+  const {effectiveTtl}=_chatExpiry;
+  if(effectiveTtl===null){banner.style.display='none';return;}
+  banner.style.display='flex';
+  txt.textContent=`Messages disappear after ${expiryLabel(effectiveTtl)}`;
+}
+function openExpirySheet(){
+  const sheet=document.getElementById('expiry-sheet');
+  const slider=document.getElementById('expiry-slider');
+  const note=document.getElementById('expiry-note');
+  const labelsEl=document.getElementById('expiry-labels');
+  if(!sheet) return;
+  // Set slider to current myExpiry
+  const myIdx=EXPIRY_OPTS.findIndex(o=>o.secs===_chatExpiry.myExpiry);
+  slider.value=myIdx<0?0:myIdx;
+  // Build labels
+  labelsEl.innerHTML=EXPIRY_OPTS.map(o=>`<span>${o.label}</span>`).join('');
+  // Constrain max to peer's setting
+  const peerIdx=EXPIRY_OPTS.findIndex(o=>o.secs===_chatExpiry.peerExpiry);
+  const maxIdx=peerIdx<0?4:peerIdx; // peer's setting is the shortest they allow; can't go longer (lower index)
+  slider.max=maxIdx;
+  onExpirySlide(slider.value,true);
+  sheet.classList.add('open');
+  note.textContent='';
+}
+function closeExpirySheet(){
+  const sheet=document.getElementById('expiry-sheet');
+  if(sheet) sheet.classList.remove('open');
+}
+function onExpirySlide(val,silent){
+  const note=document.getElementById('expiry-note');
+  const slider=document.getElementById('expiry-slider');
+  const idx=parseInt(val);
+  const opt=EXPIRY_OPTS[idx];
+  const {peerExpiry}=_chatExpiry;
+  let desc=opt.secs===null?'Messages will be kept forever.':(`Messages will be deleted after ${opt.label}.`);
+  if(peerExpiry!==null){
+    desc+=` Your contact set ${expiryLabel(peerExpiry)} as their limit — you can't choose longer.`;
+  }
+  if(!silent&&note) note.textContent=desc;
+}
+async function saveExpiry(){
+  const slider=document.getElementById('expiry-slider');
+  const idx=parseInt(slider.value);
+  const opt=EXPIRY_OPTS[idx];
+  try{
+    await apiReq('PUT','/messages/'+_chatPeer.username+'/expiry',{expiry:opt.secs});
+    _chatExpiry.myExpiry=opt.secs;
+    // Recalculate effective
+    const {peerExpiry}=_chatExpiry;
+    if(opt.secs===null&&peerExpiry===null) _chatExpiry.effectiveTtl=null;
+    else if(opt.secs===null) _chatExpiry.effectiveTtl=peerExpiry;
+    else if(peerExpiry===null) _chatExpiry.effectiveTtl=opt.secs;
+    else _chatExpiry.effectiveTtl=Math.min(opt.secs,peerExpiry);
+    updateExpiryBanner();
+    closeExpirySheet();
+  }catch(e){alert('Failed to save');}
+}
+let _lastCopied=0;
+function onChatCopy(){
+  if(!_chatPeer||_chatExpiry.effectiveTtl===null) return;
+  const now=Date.now();
+  if(now-_lastCopied<3000) return; // debounce
+  _lastCopied=now;
+  apiReq('POST','/messages/'+_chatPeer.username+'/notify-action',{action:'copy'}).catch(()=>{});
+}
+function chatImgTap(img){
+  // Track when peer long-presses/saves image — we can't detect OS-level save, but attach to our UI
 }
 
 async function sendChatMessage(){
