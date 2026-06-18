@@ -623,15 +623,13 @@ function updateInstallButton(){
   const btn=document.getElementById('login-install-btn');
   if(!btn) return;
   if(isStandalone()){btn.style.display='none';return;}
+  const plat=getPlatform();
+  const isIOS=plat.startsWith('ios');
   if(isPwaInstalled()){
+    if(isIOS){btn.style.display='none';return;}  // can't open PWA from Safari
     btn.style.display='block';
     btn.textContent='Open App';
-    btn.onclick=()=>{
-      // Try to open the installed PWA — works on Android; on iOS show a tip
-      const url=location.href.split('?')[0];
-      window.location.href=url;
-      setTimeout(()=>alert('Tip: On iPhone, find Vibes on your Home Screen to open the app.'),1200);
-    };
+    btn.onclick=()=>{window.location.href=location.href.split('?')[0];};
   } else if(_deferredInstallPrompt||!isStandalone()){
     btn.style.display='block';
     btn.textContent=L('installApp')||'Install as App';
