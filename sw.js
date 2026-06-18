@@ -94,3 +94,31 @@ self.addEventListener('message', event => {
     self.skipWaiting();
   }
 });
+
+// Push notifications for incoming messages
+self.addEventListener('push', event => {
+  let data = { title: 'Vibes', body: 'New message' };
+  try { data = event.data.json(); } catch (e) {}
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Vibes', {
+      body: data.body || 'New message',
+      icon: '/manifest.json',
+      badge: '/manifest.json',
+      tag: data.tag || 'vibes-msg',
+      data: data.data || {},
+      renotify: true
+    })
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if (c.url && 'focus' in c) return c.focus();
+      }
+      if (clients.openWindow) return clients.openWindow('/');
+    })
+  );
+});

@@ -358,7 +358,7 @@
     </div>
     <div class="auth-switch" id="aswitch" onclick="toggleMode()">Don't have an account? <b>Sign Up</b></div>
   </form>
-  <button class="install-btn" id="install-banner" style="display:none;position:static;transform:none;width:100%;max-width:none;margin-top:1rem" onclick="handleInstallClick()">Install as App</button>
+  <button class="install-btn" id="login-install-btn" style="display:none;position:static;transform:none;width:100%;max-width:none;margin-top:1rem" onclick="handleInstallClick()">Install as App</button>
 </div>
 
 <!-- INSTALL INSTRUCTIONS MODAL -->
@@ -555,7 +555,7 @@ function isStandalone(){return window.navigator.standalone===true||window.matchM
 if(isStandalone()) localStorage.setItem('vb_pwa_installed','1');
 function isPwaInstalled(){return !!localStorage.getItem('vb_pwa_installed');}
 function updateInstallButton(){
-  const btn=document.getElementById('install-banner');
+  const btn=document.getElementById('login-install-btn');
   if(!btn) return;
   if(isStandalone()){btn.style.display='none';return;}
   if(isPwaInstalled()){
@@ -1095,7 +1095,7 @@ function setLang(lang){
   // Nav title
   const nt=document.getElementById('ntitle');if(nt){const tabTitles={people:s.people,messages:s.messages,settings:s.profile};nt.textContent=tabTitles[curTab]||s.people;}
   // Install banner (login page)
-  const ib=document.getElementById('install-banner');if(ib)ib.textContent=s.installApp;
+  const ib=document.getElementById('login-install-btn');if(ib)ib.textContent=s.installApp;
   // Chat
   const cbl=document.getElementById('chat-back-lbl');if(cbl)cbl.textContent=s.back;
   const ci=document.getElementById('chat-input');if(ci)ci.placeholder=s.messagePlaceholder;
@@ -1234,7 +1234,8 @@ async function registerPush(){
   try {
     const reg = await navigator.serviceWorker.ready;
     const keyRes = await fetch(API+'/push/vapid-public-key');
-    const { publicKey } = await keyRes.json();
+    const { key: publicKey } = await keyRes.json();
+    if (!publicKey) return;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey)

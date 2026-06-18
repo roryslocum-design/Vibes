@@ -6,6 +6,7 @@ const os = require('os');
 const { randomUUID } = require('crypto');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
+const webpush = require('web-push');
 
 // Minimal .env loader (avoids adding a dotenv dependency) — only fills in vars
 // that aren't already set in the real environment.
@@ -21,6 +22,31 @@ const bcrypt = require('bcryptjs');
     const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
     if (!(key in process.env)) process.env[key] = value;
   }
+})();
+
+// VAPID setup — generate keys once if not set, persist to .env
+(() => {
+  const envPath = path.join(__dirname, ".env");
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    const keys = webpush.generateVAPIDKeys();
+    process.env.VAPID_PUBLIC_KEY = keys.publicKey;
+    process.env.VAPID_PRIVATE_KEY = keys.privateKey;
+    // Persist so they survive restarts
+    const line1 = `VAPID_PUBLIC_KEY=${keys.publicKey}`;
+    const line2 = `VAPID_PRIVATE_KEY=${keys.privateKey}`;
+    try {
+      let existing = '';
+      if (fs.existsSync(envPath)) existing = fs.readFileSync(envPath, 'utf8');
+      if (!existing.includes('VAPID_PUBLIC_KEY')) {
+        fs.writeFileSync(envPath, existing + (existing.endsWith('\n') ? '' : '\n') + line1 + '\n' + line2 + '\n');
+      }
+    } catch (e) {}
+  }
+  webpush.setVapidDetails(
+    'mailto:rory.slocum@gmail.com',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
 })();
 
 const app = express();
@@ -158,6 +184,13 @@ CREATE TABLE IF NOT EXISTS typing_indicators (
   peer TEXT NOT NULL,
   typing_at INTEGER NOT NULL,
   PRIMARY KEY (username, peer)
+);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  username TEXT NOT NULL,
+  endpoint TEXT NOT NULL,
+  subscription TEXT NOT NULL,
+  PRIMARY KEY (username, endpoint)
 );
 `);
 try { db.exec(`ALTER TABLE users ADD COLUMN avatar_color TEXT`); } catch (e) {}
@@ -826,6 +859,16 @@ app.post("/vibes-api/messages/:peer", async (req, res) => {
     if (!connected) return res.status(403).json({ error: "Not connected" });
     prepare("INSERT INTO messages (from_user, to_user, body, ts, read) VALUES (?, ?, ?, ?, 0)").run(me, peer, String(body), now());
     maybeFlagTrialEnd(me);
+    // Push notification to recipient
+    const sender = prepare("SELECT display_name FROM users WHERE username = ?").get(me);
+    const senderName = (sender && sender.display_name) || me;
+    const isImage = String(body).startsWith('data:image/');
+    sendPushToUser(peer, {
+      title: senderName,
+      body: isImage ? '📷 Sent a photo' : String(body).slice(0, 100),
+      tag: `msg-${me}`,
+      data: { fromUser: me }
+    });
     res.json({ ok: true });
   } catch (e) {
     console.error(`Error in /vibes-api/messages/${req.params.peer} POST:`, e);
@@ -880,10 +923,45 @@ app.post("/vibes-api/rizz", async (req, res) => {
   }
 });
 
+// PUSH NOTIFICATIONS
+function sendPushToUser(username, payload) {
+  const subs = prepare("SELECT subscription FROM push_subscriptions WHERE username = ?").all(username);
+  for (const row of subs) {
+    try {
+      const sub = JSON.parse(row.subscription);
+      webpush.sendNotification(sub, JSON.stringify(payload)).catch(err => {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          prepare("DELETE FROM push_subscriptions WHERE username = ? AND endpoint = ?").run(username, sub.endpoint);
+        }
+      });
+    } catch (e) {}
+  }
+}
+
+app.get("/vibes-api/push/vapid-public-key", (req, res) => res.json({ key: process.env.VAPID_PUBLIC_KEY }));
+app.post("/vibes-api/push/subscribe", (req, res) => {
+  try {
+    const me = req.me;
+    const sub = req.body;
+    if (!sub || !sub.endpoint) return res.status(400).json({ error: "Invalid subscription" });
+    prepare("INSERT OR REPLACE INTO push_subscriptions (username, endpoint, subscription) VALUES (?, ?, ?)").run(me, sub.endpoint, JSON.stringify(sub));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+app.delete("/vibes-api/push/subscribe", (req, res) => {
+  try {
+    const me = req.me;
+    prepare("DELETE FROM push_subscriptions WHERE username = ?").run(me);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // MISC
 app.post("/vibes-api/track/open", (req, res) => res.json({ ok: true }));
-app.get("/vibes-api/push/vapid-public-key", (req, res) => res.json({ key: null }));
-app.post("/vibes-api/push/subscribe", (req, res) => res.json({ ok: true }));
 
 // Handle 404 for API routes
 app.use("/vibes-api", (req, res) => {
