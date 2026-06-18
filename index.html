@@ -508,7 +508,7 @@
     <button class="chat-img-btn" onclick="document.getElementById('chat-img-input').click()">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
     </button>
-    <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="sendChatImage(this)"/>
+    <input type="file" id="chat-img-input" accept="image/*,video/*" style="display:none" onchange="sendChatMedia(this)"/>
     <button class="rizz-btn" id="rizz-btn" style="display:none" onclick="getRizzSuggestion()" title="Rizz suggestion">✨</button>
     <textarea class="chat-input" id="chat-input" placeholder="Message…" data-i18n-ph="messagePlaceholder" rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
     <button class="chat-send" id="chat-send-btn" onclick="sendChatMessage()">
@@ -522,10 +522,22 @@
 <div class="sheet" id="add-sh">
   <div class="handle"></div>
   <div class="sheet-title" id="add-sh-title">Add Person</div>
-  <input class="sheet-input" id="search-input" type="text" placeholder="Search by username…" data-i18n-ph="searchByUsername" autocomplete="off" autocapitalize="none" oninput="renderSearch()"/>
-  <button id="contacts-btn" class="sheet-btn btn-ghost" style="display:none;margin-bottom:.5rem" onclick="findFromContacts()">Find from Contacts</button>
-  <button class="sheet-btn btn-ghost" id="share-link-btn" style="margin-bottom:.5rem" onclick="shareInviteLink()">🔗 Share Invite Link</button>
+  <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">
+    <input class="sheet-input" id="search-input" type="search" placeholder="Search by username…" data-i18n-ph="searchByUsername" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore oninput="renderSearch()" style="margin-bottom:0;flex:1;min-width:0"/>
+    <button id="share-link-btn" onclick="shareInviteLink()" class="sheet-btn btn-ghost" style="flex-shrink:0;margin-bottom:0;font-size:.85rem;width:auto;align-self:stretch;height:auto">🔗 Invite</button>
+  </div>
   <div class="search-results card-list" id="search-results" style="margin-bottom:.5rem"></div>
+  <div id="suggestions-wrap" style="display:none;margin-bottom:.5rem">
+    <div style="font-size:.75rem;font-weight:600;color:var(--muted);padding:.4rem .2rem .3rem">People you might know</div>
+    <div class="card-list" id="suggestions-list"></div>
+    <div id="contacts-prompt" style="display:none;margin-top:.5rem;background:var(--s2);border-radius:14px;padding:.8rem 1rem;align-items:center;gap:.75rem">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.85rem;font-weight:600">Find friends from contacts</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.1rem">See which of your contacts are on Vibes</div>
+      </div>
+      <button class="add-btn" onclick="findFromContacts()" style="flex-shrink:0">Allow</button>
+    </div>
+  </div>
   <button class="sheet-btn btn-ghost" id="add-cancel-btn" onclick="closeSheet('add')">Cancel</button>
 </div>
 
@@ -617,6 +629,12 @@
 // ── Install button ───────────────────────────────────────────────────────────
 let _deferredInstallPrompt=null;
 function isStandalone(){return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;}
+function updateAppBadge(count){
+  if(!('setAppBadge' in navigator))return;
+  if(count>0)navigator.setAppBadge(count).catch(()=>{});
+  else navigator.clearAppBadge().catch(()=>{});
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)navigator.clearAppBadge&&navigator.clearAppBadge().catch(()=>{});});
 if(isStandalone()) localStorage.setItem('vb_pwa_installed','1');
 function isPwaInstalled(){return !!localStorage.getItem('vb_pwa_installed');}
 function updateInstallButton(){
@@ -1382,11 +1400,37 @@ function closeSheet(id){document.getElementById(id+'-ov').classList.remove('show
 function openAdd(){
   document.getElementById('search-input').value='';
   document.getElementById('search-results').innerHTML='';
-  const cb=document.getElementById('contacts-btn');
-  cb.style.display=('contacts' in navigator)?'':'none';
   openSheet('add');
   initSheetSwipe('add');
   setTimeout(()=>document.getElementById('search-input').focus(),350);
+  loadSuggestions();
+}
+function renderSuggestionRow(u,subText){
+  let btnHtml;
+  if(u.theyRequested) btnHtml=`<button class="add-btn btn-accept" onclick="acceptFromSearch('${u.username}')">${L('acceptBtn')}</button>`;
+  else                btnHtml=`<button class="add-btn" onclick="sendRequest('${u.username}')">${L('addBtn')}</button>`;
+  const name=u.displayName||u.username;
+  const avHtml=u.photoDataUrl
+    ?`<div class="av av-md">${mediaElement(u.photoDataUrl)}</div>`
+    :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(name))}</div>`;
+  return `<div class="search-row">${avHtml}<div class="row-info"><div class="row-name">${esc(name)}</div><div class="row-sub">${esc(u.username)}${subText?` · ${subText}`:''}</div></div><div class="search-act">${btnHtml}</div></div>`;
+}
+async function loadSuggestions(){
+  const wrap=document.getElementById('suggestions-wrap');
+  const list=document.getElementById('suggestions-list');
+  const prompt=document.getElementById('contacts-prompt');
+  wrap.style.display='';
+  try{
+    const results=await apiReq('GET','/users/suggestions');
+    const hasContacts='contacts' in navigator;
+    const contactsSynced=!!localStorage.getItem('vb_contacts_synced');
+    if(prompt) prompt.style.display=(hasContacts&&!contactsSynced)?'flex':'none';
+    if(!results||!results.length){list.innerHTML='';return;}
+    list.innerHTML=results.map(u=>{
+      const mutual=u.mutualCount===1?'1 mutual':u.mutualCount+' mutuals';
+      return renderSuggestionRow(u,mutual);
+    }).join('');
+  }catch(e){}
 }
 
 function getInviteLink(){return `${location.origin}/vibes/?invite=${encodeURIComponent(me)}`;}
@@ -1419,33 +1463,36 @@ async function consumePendingInvite(){
 
 async function findFromContacts(){
   if(!('contacts' in navigator))return;
-  const el=document.getElementById('search-results');
+  const wrap=document.getElementById('suggestions-wrap');
+  const list=document.getElementById('suggestions-list');
+  const prompt=document.getElementById('contacts-prompt');
   try{
     const contacts=await navigator.contacts.select(['name'],{multiple:true});
     if(!contacts.length)return;
-    el.innerHTML=`<div class="search-empty">${L('searching')}</div>`;
-    const seen=new Set();const allResults=[];
+    localStorage.setItem('vb_contacts_synced','1');
+    if(prompt)prompt.style.display='none';
+    wrap.style.display='';
+    // prepend a loading indicator above existing suggestions
+    const loader=document.createElement('div');
+    loader.className='search-empty';loader.textContent=L('searching');
+    list.prepend(loader);
+    const seen=new Set(Array.from(list.querySelectorAll('.search-row')).map(r=>r.dataset.u));
+    const newRows=[];
     for(const c of contacts){
       const name=(c.name||[])[0];if(!name)continue;
       const words=name.trim().split(/\s+/).filter(w=>w.length>=3);
       for(const word of words){
         const results=await apiReq('GET',`/users/search?q=${encodeURIComponent(word)}`);
-        for(const u of results){if(!seen.has(u.username)&&hasThreeConsecutive(name,u.username)){seen.add(u.username);allResults.push(u);}}
+        for(const u of results){
+          if(!seen.has(u.username)&&hasThreeConsecutive(name,u.username)&&!u.connected){
+            seen.add(u.username);
+            newRows.push(renderSuggestionRow(u,'in your contacts'));
+          }
+        }
       }
     }
-    if(!allResults.length){el.innerHTML=`<div class="search-empty">${L('noContacts')}</div>`;return;}
-    el.innerHTML=allResults.map(u=>{
-      let btnHtml;
-      if(u.connected)       btnHtml=`<button class="add-btn connected" disabled>${L('vibeScore')}</button>`;
-      else if(u.pending)    btnHtml=`<button class="add-btn sent" onclick="cancelRequest('${u.username}')">${L('cancelBtn')}</button>`;
-      else if(u.theyRequested) btnHtml=`<button class="add-btn btn-accept" onclick="acceptFromSearch('${u.username}')">${L('acceptBtn')}</button>`;
-      else                  btnHtml=`<button class="add-btn" onclick="sendRequest('${u.username}')">${L('addBtn')}</button>`;
-      const name=u.displayName||u.username;
-      const avHtml=u.photoDataUrl
-        ?`<div class="av av-md">${mediaElement(u.photoDataUrl)}</div>`
-        :`<div class="av av-md" style="background:linear-gradient(135deg,#5e5ce6,#ff375f)">${esc(ini(name))}</div>`;
-      return `<div class="search-row">${avHtml}<div class="row-info"><div class="row-name">${esc(name)}</div><div class="row-sub">${esc(u.username)}</div></div><div class="search-act">${btnHtml}</div></div>`;
-    }).join('');
+    loader.remove();
+    if(newRows.length) list.insertAdjacentHTML('afterbegin',newRows.join(''));
   }catch(e){/* cancelled or denied */}
 }
 
@@ -1453,8 +1500,10 @@ let _searchTimeout=null;
 function renderSearch(){
   const q=document.getElementById('search-input').value.trim().toLowerCase();
   const el=document.getElementById('search-results');
-  if(!q){el.innerHTML='';return;}
+  const sw=document.getElementById('suggestions-wrap');
+  if(!q){el.innerHTML='';if(sw)sw.style.display='';return;}
   if(q.length<3){el.innerHTML='';return;}
+  if(sw)sw.style.display='none';
   clearTimeout(_searchTimeout);
   _searchTimeout=setTimeout(async()=>{
     const results=await apiReq('GET',`/users/search?q=${encodeURIComponent(q)}`);
@@ -2012,6 +2061,7 @@ async function pollMessages(){
     const badge=document.getElementById('msg-tab-badge');
     if(totalUnread>0){badge.style.display='flex';badge.textContent=totalUnread>9?'9+':totalUnread;}
     else{badge.style.display='none';}
+    updateAppBadge(totalUnread);
     if(curTab==='messages') renderMessages();
     if(_chatPeer) renderChatMessages();
   }catch(e){}
@@ -2038,7 +2088,7 @@ async function renderMessages(){
       ${avHtml}
       <div class="row-info">
         <div class="row-name">${esc(c.name)}</div>
-        ${c.lastMessage&&c.lastMessage.startsWith('data:image/')?`<img class="msg-img-thumb" src="${c.lastMessage}"/>`:`<div class="msg-preview">${esc(c.lastMessage)}</div>`}
+        ${c.lastMessage&&c.lastMessage.startsWith('data:image/')?`<img class="msg-img-thumb" src="${c.lastMessage}"/>`:(c.lastMessage&&c.lastMessage.startsWith('data:video/'))?`<div class="msg-preview">🎥 Video</div>`:`<div class="msg-preview">${esc(c.lastMessage)}</div>`}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
         <div class="msg-ts">${ts}</div>
@@ -2080,7 +2130,7 @@ function filterMessages(){
       ${avHtml}
       <div class="row-info">
         <div class="row-name">${esc(c.name)}</div>
-        ${c.lastMessage&&c.lastMessage.startsWith('data:image/')?`<img class="msg-img-thumb" src="${c.lastMessage}"/>`:`<div class="msg-preview">${esc(c.lastMessage)}</div>`}
+        ${c.lastMessage&&c.lastMessage.startsWith('data:image/')?`<img class="msg-img-thumb" src="${c.lastMessage}"/>`:(c.lastMessage&&c.lastMessage.startsWith('data:video/'))?`<div class="msg-preview">🎥 Video</div>`:`<div class="msg-preview">${esc(c.lastMessage)}</div>`}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
         <div class="msg-ts">${ts}</div>
@@ -2201,6 +2251,7 @@ async function renderChatMessages(){
     const badge=document.getElementById('msg-tab-badge');
     if(totalUnread>0){badge.style.display='flex';badge.textContent=totalUnread>9?'9+':totalUnread;}
     else{badge.style.display='none';}
+    updateAppBadge(totalUnread);
   }
   // Find index of last read sent message for read receipt
   let lastReadIdx=-1;
@@ -2217,12 +2268,16 @@ async function renderChatMessages(){
     }
     const mine=m.from===me;
     const isImg=m.body.startsWith('data:image/');
+    const isVid=m.body.startsWith('data:video/');
+    const isMedia=isImg||isVid;
     const bubbleContent=isImg
       ?`<img src="${m.body}" loading="lazy" onclick="chatImgTap(this)"/>`
-      :esc(m.body);
+      :isVid
+        ?`<video src="${m.body}" controls playsinline preload="metadata" style="max-width:100%;border-radius:10px;display:block;"></video>`
+        :esc(m.body);
     const receipt=(mine&&i===lastReadIdx)?`<div class="read-receipt">${L('readReceipt')}</div>`:'';
     return `<div class="bubble-wrap ${mine?'mine':'theirs'}">
-      <div class="bubble ${mine?'mine':'theirs'}${isImg?' img-bubble':''}">${bubbleContent}</div>
+      <div class="bubble ${mine?'mine':'theirs'}${isMedia?' img-bubble':''}">${bubbleContent}</div>
       <div class="bubble-ts">${formatMsgTs(m.ts)}${receipt}</div>
     </div>`;
   }).join('')||`<div class="empty" style="margin:auto"><div class="empty-ico">👋</div><div class="empty-sub">${L('sayHello')}</div></div>`;
@@ -2376,10 +2431,26 @@ function useRizz(text){
   document.getElementById('rizz-bar').className='rizz-bar';
 }
 
-async function sendChatImage(input){
+async function sendChatMedia(input){
   if(!_chatPeer||!input.files||!input.files[0]) return;
   const file=input.files[0];
   input.value='';
+  const isVideo=file.type.startsWith('video/');
+  if(isVideo){
+    const MAX_MB=25;
+    if(file.size>MAX_MB*1024*1024){alert(`Video must be under ${MAX_MB}MB.`);return;}
+    const reader=new FileReader();
+    reader.onload=async e=>{
+      try{
+        await apiReq('POST','/messages/'+_chatPeer.username,{body:e.target.result});
+        await renderChatMessages();
+        document.getElementById('chat-messages').scrollTop=document.getElementById('chat-messages').scrollHeight;
+      }catch(e){console.error('Video send failed',e);}
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  // Image — resize before sending
   const reader=new FileReader();
   reader.onload=async e=>{
     const img=new Image();

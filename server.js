@@ -651,6 +651,33 @@ app.get("/vibes-api/users/search", (req, res) => {
   }
 });
 
+app.get("/vibes-api/users/suggestions", (req, res) => {
+  try {
+    const me = req.me;
+    const rows = prepare(`
+      SELECT p2.source_username AS username, u.display_name, u.photo_data_url, COUNT(*) AS mutual_count
+      FROM people p1
+      JOIN people p2 ON p2.owner = p1.source_username
+      JOIN users u ON u.username = p2.source_username
+      WHERE p1.owner = ?
+        AND p2.source_username != ?
+        AND p2.source_username NOT IN (SELECT source_username FROM people WHERE owner = ?)
+        AND p2.source_username NOT IN (SELECT to_user FROM requests WHERE from_user = ?)
+      GROUP BY p2.source_username
+      ORDER BY mutual_count DESC
+      LIMIT 20
+    `).all(me, me, me, me);
+    const results = rows.map(r => {
+      const theyRequested = prepare("SELECT 1 FROM requests WHERE from_user = ? AND to_user = ?").get(r.username, me) ? true : false;
+      return { username: r.username, displayName: r.display_name || r.username, photoDataUrl: r.photo_data_url || null, mutualCount: r.mutual_count, connected: false, pending: false, theyRequested };
+    });
+    res.json(results);
+  } catch (e) {
+    console.error("Error in /vibes-api/users/suggestions:", e);
+    res.status(500).json({ error: e.message || "Server error" });
+  }
+});
+
 app.get("/vibes-api/users/:username", (req, res) => {
   try {
     const username = decodeURIComponent(req.params.username);
@@ -901,11 +928,12 @@ app.post("/vibes-api/messages/:peer", async (req, res) => {
     const sender = prepare("SELECT display_name FROM users WHERE username = ?").get(me);
     const senderName = (sender && sender.display_name) || me;
     const isImage = String(body).startsWith('data:image/');
+    const unreadCount = prepare("SELECT COUNT(*) AS c FROM messages WHERE to_user = ? AND read = 0").get(peer).c;
     sendPushToUser(peer, {
       title: senderName,
       body: isImage ? '📷 Sent a photo' : String(body).slice(0, 100),
       tag: `msg-${me}`,
-      data: { fromUser: me }
+      data: { fromUser: me, unreadCount }
     });
     res.json({ ok: true });
   } catch (e) {

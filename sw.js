@@ -66,12 +66,18 @@ self.addEventListener('push', event => {
       tag: data.tag || 'vibes-msg',
       data: data.data || {},
       renotify: true
+    }).then(() => {
+      if ('setAppBadge' in self.navigator) {
+        const count = (data.data && data.data.unreadCount) || 1;
+        return self.navigator.setAppBadge(count).catch(() => {});
+      }
     })
   );
 });
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  if ('clearAppBadge' in self.navigator) self.navigator.clearAppBadge().catch(() => {});
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const c of list) { if (c.url && 'focus' in c) return c.focus(); }
