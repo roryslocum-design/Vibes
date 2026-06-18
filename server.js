@@ -443,10 +443,10 @@ app.get(['/relations', '/relations/', '/relations/index.html'], (req, res) => {
 });
 
 // Manifest / icon stubs
-const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff375f"/><stop offset=".5" stop-color="#bf5af2"/><stop offset="1" stop-color="#0a84ff"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#000"/><text x="32" y="44" text-anchor="middle" font-size="36" font-weight="800" fill="url(#g)" font-family="-apple-system,Helvetica Neue,sans-serif">V</text></svg>`;
-// Maskable variant: full-bleed background (OS applies its own mask shape) with the
-// glyph sized within the centered ~80% "safe zone" so it survives circular/squircle crops.
-const ICON_SVG_MASKABLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff375f"/><stop offset=".5" stop-color="#bf5af2"/><stop offset="1" stop-color="#0a84ff"/></linearGradient></defs><rect width="64" height="64" fill="#000"/><text x="32" y="41" text-anchor="middle" font-size="26" font-weight="800" fill="url(#g)" font-family="-apple-system,Helvetica Neue,sans-serif">V</text></svg>`;
+// V drawn as a path so it renders correctly on Linux (no system fonts needed)
+const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff375f"/><stop offset=".5" stop-color="#bf5af2"/><stop offset="1" stop-color="#0a84ff"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#000"/><path d="M13 17 L32 50 L51 17" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+// Maskable: full-bleed background, V kept within 80% safe zone
+const ICON_SVG_MASKABLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff375f"/><stop offset=".5" stop-color="#bf5af2"/><stop offset="1" stop-color="#0a84ff"/></linearGradient></defs><rect width="64" height="64" fill="#000"/><path d="M17 20 L32 46 L47 20" stroke="url(#g)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
 
 let sharp = null;
 try { sharp = require('sharp'); } catch (e) {}

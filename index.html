@@ -734,7 +734,7 @@ function showInstallModal(plat){
   document.getElementById('install-modal').classList.add('show');
 }
 function closeInstallModal(){document.getElementById('install-modal').classList.remove('show');}
-updateInstallButton();maybeShowInstallButton();
+// (deferred — called after LANG_STRINGS is initialized below)
 
 // ── Scales ────────────────────────────────────────────────────────────────────
 const API='/vibes-api';
@@ -1116,6 +1116,7 @@ function renderOnboarding(){
   obSetPage(obPage<pages.length?obPage:0);
 }
 let _lang='en';
+updateInstallButton();maybeShowInstallButton();
 function setLang(lang){
   _lang=lang;
   const s=LANG_STRINGS[lang]||LANG_STRINGS.en;
