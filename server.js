@@ -443,60 +443,36 @@ app.get(['/relations', '/relations/', '/relations/index.html'], (req, res) => {
 });
 
 // Manifest / icon stubs
-// V proportions traced from SF Pro Display 800 on macOS (font-independent, renders identically on Linux/Railway)
-// Arms: 25% width each, 50% gap — matches Helvetica/SF Pro weight-800 V exactly
-const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><defs><linearGradient id="g" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#ff375f"/><stop offset="50%" stop-color="#bf5af2"/><stop offset="100%" stop-color="#0a84ff"/></linearGradient><clipPath id="v"><polygon points="24,16 60,16 96,176"/><polygon points="132,16 168,16 96,176"/></clipPath></defs><rect width="192" height="192" rx="42" fill="#000"/><rect width="192" height="192" fill="url(#g)" clip-path="url(#v)"/></svg>`;
-const ICON_SVG_MASKABLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><defs><linearGradient id="g" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#ff375f"/><stop offset="50%" stop-color="#bf5af2"/><stop offset="100%" stop-color="#0a84ff"/></linearGradient><clipPath id="v"><polygon points="32,24 68,24 96,168"/><polygon points="124,24 160,24 96,168"/></clipPath></defs><rect width="192" height="192" fill="#000"/><rect width="192" height="192" fill="url(#g)" clip-path="url(#v)"/></svg>`;
+const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><defs><linearGradient id="g" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#ff375f"/><stop offset="50%" stop-color="#bf5af2"/><stop offset="100%" stop-color="#0a84ff"/></linearGradient></defs><rect width="192" height="192" rx="42" fill="#000"/><polygon points="24,16 60,16 96,176" fill="url(#g)"/><polygon points="132,16 168,16 96,176" fill="url(#g)"/></svg>`;
+const ICON_SVG_MASKABLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><defs><linearGradient id="g" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#ff375f"/><stop offset="50%" stop-color="#bf5af2"/><stop offset="100%" stop-color="#0a84ff"/></linearGradient></defs><rect width="192" height="192" fill="#000"/><polygon points="32,24 68,24 96,168" fill="url(#g)"/><polygon points="124,24 160,24 96,168" fill="url(#g)"/></svg>`;
 
-let sharp = null;
-try { sharp = require('sharp'); } catch (e) {}
-const iconPngCache = new Map();
-async function getIconPng(svg, size) {
-  const key = svg + '|' + size;
-  if (iconPngCache.has(key)) return iconPngCache.get(key);
-  const buf = await sharp(Buffer.from(svg)).resize(size, size).png().toBuffer();
-  iconPngCache.set(key, buf);
-  return buf;
-}
+// Pre-built PNGs (generated on macOS with Helvetica — font-independent on Railway)
+const ICON_PNG_192 = fs.readFileSync(path.join(__dirname, 'icon-192.png'));
+const ICON_PNG_512 = fs.readFileSync(path.join(__dirname, 'icon-512.png'));
+const ICON_PNG_512M = fs.readFileSync(path.join(__dirname, 'icon-512-maskable.png'));
+const ICON_PNG_180 = fs.readFileSync(path.join(__dirname, 'apple-touch-icon.png'));
 
 app.get('/vibes/manifest.json', (req, res) => {
-    res.json({
-      name: "Vibes", short_name: "Vibes", start_url: "/vibes/", scope: "/vibes/", display: "standalone",
-      background_color: "#000", theme_color: "#000",
-      icons: sharp ? [
-        { src: "/vibes/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: "/vibes/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-        { src: "/vibes/icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-      ] : [
-        { src: "/vibes/icon.svg", sizes: "192x192", type: "image/svg+xml", purpose: "any" },
-        { src: "/vibes/icon.svg", sizes: "512x512", type: "image/svg+xml", purpose: "any" },
-      ],
-    });
+  res.json({
+    name: "Vibes", short_name: "Vibes", start_url: "/vibes/", scope: "/vibes/", display: "standalone",
+    background_color: "#000", theme_color: "#000",
+    icons: [
+      { src: "/vibes/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/vibes/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/vibes/icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+  });
 });
 // Icon routes — served at both / and /vibes/ for compatibility
 for (const prefix of ['', '/vibes']) {
   app.get(prefix + '/icon.svg', (req, res) => res.type('image/svg+xml').send(ICON_SVG));
-  app.get(prefix + '/icon-192.png', async (req, res) => {
-    if (!sharp) return res.status(404).end();
-    try { res.type('image/png').send(await getIconPng(ICON_SVG, 192)); }
-    catch (e) { res.status(500).end(); }
-  });
-  app.get(prefix + '/icon-512.png', async (req, res) => {
-    if (!sharp) return res.status(404).end();
-    try { res.type('image/png').send(await getIconPng(ICON_SVG, 512)); }
-    catch (e) { res.status(500).end(); }
-  });
-  app.get(prefix + '/icon-512-maskable.png', async (req, res) => {
-    if (!sharp) return res.status(404).end();
-    try { res.type('image/png').send(await getIconPng(ICON_SVG_MASKABLE, 512)); }
-    catch (e) { res.status(500).end(); }
-  });
+  app.get(prefix + '/icon-192.png', (req, res) => res.type('image/png').send(ICON_PNG_192));
+  app.get(prefix + '/icon-512.png', (req, res) => res.type('image/png').send(ICON_PNG_512));
+  app.get(prefix + '/icon-512-maskable.png', (req, res) => res.type('image/png').send(ICON_PNG_512M));
 }
 // iOS uses apple-touch-icon.png specifically
-app.get(['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png'], async (req, res) => {
-  if (!sharp) return res.status(404).end();
-  try { res.type('image/png').send(await getIconPng(ICON_SVG, 180)); }
-  catch (e) { res.status(500).end(); }
+app.get(['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png'], (req, res) => {
+  res.type('image/png').send(ICON_PNG_180);
 });
 
 // Minimal service worker — required for PWA installability (Chrome/Edge won't fire

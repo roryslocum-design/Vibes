@@ -626,11 +626,16 @@ function updateInstallButton(){
   const plat=getPlatform();
   const isIOS=plat.startsWith('ios');
   if(isPwaInstalled()){
-    if(isIOS){btn.style.display='none';return;}  // can't open PWA from Safari
-    btn.style.display='block';
-    btn.textContent='Open App';
-    btn.onclick=()=>{window.location.href=location.href.split('?')[0];};
-  } else if(_deferredInstallPrompt||!isStandalone()){
+    const isChrome=/Chrome\//.test(navigator.userAgent)&&!/Edg\//.test(navigator.userAgent);
+    if(isChrome){
+      btn.style.display='block';
+      btn.textContent='Open App';
+      btn.onclick=()=>{window.location.href=location.origin+'/';};
+      return;
+    }
+    btn.style.display='none';return;
+  }
+  if(_deferredInstallPrompt||!isStandalone()){
     btn.style.display='block';
     btn.textContent=L('installApp')||'Install as App';
     btn.onclick=handleInstallClick;
@@ -682,7 +687,9 @@ async function handleInstallClick(){
     hideInstallButton();
     return;
   }
-  showInstallModal(getPlatform());
+  const plat=getPlatform();
+  if(plat.startsWith('ios')) localStorage.setItem('vb_pwa_installed','1');
+  showInstallModal(plat);
 }
 const INSTALL_STEPS={
   'ios-safari':[
