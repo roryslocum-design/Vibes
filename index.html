@@ -32,6 +32,8 @@
     .auth-input::placeholder{color:var(--muted);}
     .auth-btn{width:100%;padding:.95rem;border-radius:14px;border:none;background:var(--blue);color:#fff;font-size:1rem;font-weight:600;font-family:inherit;cursor:pointer;margin-top:.3rem;}
     .auth-btn:active{opacity:.8;}
+    .auth-install-btn{width:100%;padding:.95rem;border-radius:14px;border:none;background:var(--s1);color:var(--text);font-size:1rem;font-weight:600;font-family:inherit;cursor:pointer;margin-top:.3rem;}
+    .auth-install-btn:active{opacity:.8;}
     .auth-err{color:var(--red);font-size:.83rem;text-align:center;min-height:1.1em;}
     @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
     .auth-switch{color:var(--blue);text-align:center;font-size:.88rem;cursor:pointer;padding:.5rem;}
@@ -307,8 +309,8 @@
     .ob-close:active{opacity:.7;}
     #ob-sheet{position:relative;}
     .ob-pages{overflow:hidden;flex:1;position:relative;}
-    .ob-slider{display:flex;width:800%;height:100%;transition:transform .35s cubic-bezier(.32,.72,0,1);}
-    .ob-page{width:calc(100%/8);flex-shrink:0;padding:2rem 2rem 1rem;display:flex;flex-direction:column;align-items:center;text-align:center;box-sizing:border-box;}
+    .ob-slider{display:flex;width:900%;height:100%;transition:transform .35s cubic-bezier(.32,.72,0,1);}
+    .ob-page{width:calc(100%/9);flex-shrink:0;padding:2rem 2rem 1rem;display:flex;flex-direction:column;align-items:center;text-align:center;box-sizing:border-box;}
     .ob-emoji{font-size:3.5rem;margin-bottom:1.2rem;}
     .ob-title{font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:.75rem;}
     .ob-body{font-size:.92rem;line-height:1.65;color:rgba(255,255,255,.72);}
@@ -376,8 +378,8 @@
       <span style="color:var(--blue);font-size:.88rem;font-weight:600;cursor:pointer" onclick="obOpen()" id="learn-more-btn">Learn More</span>
     </div>
     <div class="auth-switch" id="aswitch" onclick="toggleMode()">Don't have an account? <b>Sign Up</b></div>
+    <button type="button" class="auth-install-btn" id="login-install-btn" style="display:none" onclick="handleInstallClick()">Install as App</button>
   </form>
-  <button class="install-btn" id="login-install-btn" style="display:none;position:static;transform:none;width:100%;max-width:none;margin-top:1rem" onclick="handleInstallClick()">Install as App</button>
 </div>
 
 <!-- INSTALL INSTRUCTIONS MODAL -->
@@ -469,10 +471,10 @@
 <div class="expiry-sheet" id="expiry-sheet" onclick="if(event.target===this||event.target.classList.contains('expiry-sheet-bg'))closeExpirySheet()">
   <div class="expiry-sheet-bg"></div>
   <div class="expiry-sheet-card">
-    <div class="expiry-sheet-title">⏳ Chat Memory</div>
+    <div class="expiry-sheet-title" id="expiry-sheet-title">Chat Memory</div>
     <div class="expiry-slider-wrap">
-      <input type="range" class="expiry-slider" id="expiry-slider" min="0" max="4" step="1" value="0" oninput="onExpirySlide(this.value)"/>
-      <div class="expiry-labels" id="expiry-labels"></div>
+      <input type="range" class="expiry-slider" id="expiry-slider" min="0" max="200" step="1" value="0" oninput="onExpirySlide(this.value)"/>
+      <div class="expiry-labels"><span>Indefinite</span><span>30d</span><span>7d</span><span>1d</span><span>1hr</span><span>1min</span></div>
     </div>
     <div class="expiry-note" id="expiry-note"></div>
     <button class="expiry-save-btn" onclick="saveExpiry()">Save</button>
@@ -599,7 +601,7 @@ function updateInstallButton(){
   if(!btn) return;
   if(isStandalone()){btn.style.display='none';return;}
   if(isPwaInstalled()){
-    btn.style.display='flex';
+    btn.style.display='block';
     btn.textContent='Open App';
     btn.onclick=()=>{
       // Try to open the installed PWA — works on Android; on iOS show a tip
@@ -607,12 +609,10 @@ function updateInstallButton(){
       window.location.href=url;
       setTimeout(()=>alert('Tip: On iPhone, find Vibes on your Home Screen to open the app.'),1200);
     };
-  } else if(_deferredInstallPrompt){
-    btn.style.display='flex';
+  } else if(_deferredInstallPrompt||!isStandalone()){
+    btn.style.display='block';
     btn.textContent=L('installApp')||'Install as App';
     btn.onclick=handleInstallClick;
-  } else {
-    btn.style.display='none';
   }
 }
 function getPlatform(){
@@ -1047,6 +1047,7 @@ const OB_PAGES={
     {emoji:'👋',title:'Rate your friendships',steps:['Everyone in your life sits somewhere on the friend scale, from Acquaintance to Ride or Die.',"Open someone's profile and tap a dot to mark where they're at.",'Update it anytime the vibe shifts — nothing is locked in.'],detail:'Acquaintance · Friend · Good Friend · Best Friend · Ride or Die'},
     {emoji:'💕',title:'Track romantic vibes too',steps:['The romantic scale is on by default for everyone you connect with.','Tap a dot to mark where things stand, from Curious to Soulmate.',"Don't want it showing for someone? Turn it off for them anytime."],detail:'Curious · Talking · Dating · Partner · Soulmate'},
     {emoji:'✨',title:'Rizz assist',body:"Once someone's romantic vibe reaches Curious or higher, a ✨ button appears in your chat with them. Tap it and the app will suggest something to say — a little AI help when you're not sure how to move things forward."},
+    {emoji:'💬',title:'Messages & streaks',body:"Message anyone you're connected with directly in the app. Send something every day to build a 🔥 streak — miss a day and it resets. Tap ⚙️ in any chat to set a memory timer: messages can vanish after 1 minute to 30 days, or stay forever. The shorter of your two settings wins. If someone copies or saves in a disappearing chat, you'll know."},
     {emoji:'🔒',title:'When things get serious',body:"Once your Vibe Score with someone hits Dating or higher, your romantic scale gets locked for everyone else — and at the same time, anyone viewing your profile sees that you're in a relationship. The app recognises you're in something and takes you off the table. No action needed — it happens automatically."},
     {emoji:'💫',title:'A use case',body:'Sam and Alex secretly like each other. Sam, ready to date, marks their vibe at Dating. Alex, wanting to take things a bit slower, marks Talking. They would have never known they liked each other — but now they\'re talking.'},
     {emoji:'🙌',title:'No pressure, no labels',body:"Vibes isn't here to define anyone or create pressure around where things stand. Scores are private — no one else sees them. Don't let the numbers box anyone in. The app works for you, not the other way around."},
@@ -1057,6 +1058,7 @@ const OB_PAGES={
     {emoji:'👋',title:'为你的友情评分',steps:['生活中的每个人都在友情刻度上有位置，从熟人到死党。','打开某人的资料，点击一个点来标记关系所在。','随时更新——没有什么是固定不变的。'],detail:'熟人 · 朋友 · 好朋友 · 挚友 · 死党'},
     {emoji:'💕',title:'也追踪浪漫氛围',steps:['浪漫刻度默认对所有联系人开启。','点击一个点，从好奇到灵魂伴侣，标记当前状态。','不想为某人显示？随时关闭。'],detail:'好奇 · 聊着 · 约会中 · 伴侣 · 灵魂伴侣'},
     {emoji:'✨',title:'撩人助手',body:'一旦某人的浪漫氛围达到好奇或更高，聊天界面会出现一个 ✨ 按钮。点击它，应用会为你推荐一些话——当你不知道如何推进时，有一点 AI 帮助。'},
+    {emoji:'💬',title:'消息与连击',body:'直接在应用中与联系人发消息。每天发送消息可建立🔥连击——错过一天即重置。点击任意聊天中的⚙️可设置记忆时间：消息可在1分钟到30天后消失，也可永久保留。两人中较短的时间为准。若对方在阅后即焚聊天中复制或保存消息，你会收到通知。'},
     {emoji:'🔒',title:'当关系变认真',body:'一旦你与某人的氛围分达到约会或更高，你对其他所有人的浪漫刻度将被锁定——同时，查看你资料的人会看到你正在恋爱中。应用识别到你在一段关系中，并将你从待选名单中移除。无需任何操作——自动发生。'},
     {emoji:'💫',title:'一个使用案例',body:'Sam 和 Alex 暗恋彼此。Sam 准备好约会，将氛围标记为"约会中"。Alex 想慢慢来，标记为"聊着"。他们本来永远不会知道彼此喜欢对方——但现在他们开始聊了。'},
     {emoji:'🙌',title:'没有压力，没有标签',body:'Vibes 不是来定义任何人或制造压力的。分数是私密的——没有人能看到。不要让数字束缚任何人。应用为你服务，而不是相反。'},
@@ -1067,6 +1069,7 @@ const OB_PAGES={
     {emoji:'👋',title:'अपनी दोस्ती को रेट करें',steps:['आपकी जिंदगी में हर व्यक्ति दोस्ती के पैमाने पर कहीं न कहीं है, जान-पहचान से लेकर खास दोस्त तक।','किसी की प्रोफ़ाइल खोलें और एक डॉट टैप करके उनकी स्थिति चिह्नित करें।','जब भी वाइब बदले, अपडेट करें — कुछ भी पक्का नहीं।'],detail:'जान-पहचान · दोस्त · अच्छे दोस्त · बेस्ट फ्रेंड · खास दोस्त'},
     {emoji:'💕',title:'रोमांटिक वाइब भी ट्रैक करें',steps:['रोमांटिक स्केल डिफ़ॉल्ट रूप से सभी के लिए चालू है।','एक डॉट टैप करके स्थिति चिह्नित करें, उत्सुक से आत्मीय साथी तक।','किसी के लिए नहीं दिखाना? कभी भी बंद करें।'],detail:'उत्सुक · बात हो रही है · डेटिंग · साथी · आत्मीय साथी'},
     {emoji:'✨',title:'रिज़ असिस्ट',body:'जैसे ही किसी का रोमांटिक वाइब उत्सुक या उससे ऊपर पहुँचता है, चैट में ✨ बटन दिखाई देता है। इसे टैप करें और ऐप कुछ कहने का सुझाव देगा — थोड़ी AI मदद जब आप नहीं जानते कि आगे कैसे बढ़ें।'},
+    {emoji:'💬',title:'संदेश और स्ट्रीक्स',body:'ऐप में सीधे किसी से भी मैसेज करें। हर दिन मैसेज करके 🔥 स्ट्रीक बनाएं — एक दिन चूके तो रीसेट। किसी भी चैट में ⚙️ दबाकर मेमोरी टाइमर सेट करें: संदेश 1 मिनट से 30 दिन में मिट सकते हैं या हमेशा रखे जा सकते हैं। दोनों में से कम वाला लागू होता है। यदि कोई गायब चैट में कॉपी या सेव करे, तो आपको पता चलेगा।'},
     {emoji:'🔒',title:'जब बात गंभीर हो',body:'एक बार जब किसी के साथ आपका वाइब स्कोर डेटिंग या उससे ऊपर पहुँच जाए, तो बाकी सभी के लिए आपका रोमांटिक स्केल लॉक हो जाता है — और साथ ही आपकी प्रोफ़ाइल देखने वाले देख सकते हैं कि आप रिश्ते में हैं। ऐप खुद पहचान लेता है और आपको उपलब्ध सूची से हटा देता है। कोई कार्रवाई जरूरी नहीं — यह अपने आप होता है।'},
     {emoji:'💫',title:'एक उदाहरण',body:'Sam और Alex एक-दूसरे को गुप्त रूप से पसंद करते हैं। Sam, डेट करने के लिए तैयार, वाइब को डेटिंग पर चिह्नित करता है। Alex, थोड़ा धीरे जाना चाहता है, "बात हो रही है" चिह्नित करता है। वे कभी नहीं जान पाते कि एक-दूसरे को पसंद करते हैं — लेकिन अब वे बात कर रहे हैं।'},
     {emoji:'🙌',title:'कोई दबाव नहीं, कोई लेबल नहीं',body:'Vibes यहाँ किसी को परिभाषित करने या दबाव बनाने के लिए नहीं है। स्कोर निजी हैं — कोई और नहीं देख सकता। संख्याओं को किसी को बाँधने न दें। ऐप आपके लिए काम करता है, इसके विपरीत नहीं।'},
@@ -1077,6 +1080,7 @@ const OB_PAGES={
     {emoji:'👋',title:'Valora tus amistades',steps:['Cada persona en tu vida ocupa un lugar en la escala de amistad, de Conocido a Inseparable.','Abre el perfil de alguien y toca un punto para marcar dónde están.','Actualízalo cuando el vibe cambie — nada está fijo.'],detail:'Conocido · Amigo · Buen amigo · Mejor amigo · Inseparable'},
     {emoji:'💕',title:'Sigue los vibes románticos también',steps:['La escala romántica está activada por defecto para todos tus contactos.','Toca un punto para marcar cómo van las cosas, de Curiosidad a Alma gemela.','¿No quieres que aparezca para alguien? Desactívala cuando quieras.'],detail:'Curiosidad · Hablando · Saliendo · Pareja · Alma gemela'},
     {emoji:'✨',title:'Asistente de ligue',body:'Cuando el vibe romántico de alguien alcanza Curiosidad o más, aparece un botón ✨ en tu chat con ellos. Tócalo y la app sugerirá algo que decir — un poco de ayuda de IA cuando no sabes cómo avanzar.'},
+    {emoji:'💬',title:'Mensajes y rachas',body:'Escríbele a cualquier contacto directamente en la app. Hazlo cada día para construir una racha 🔥 — si fallas un día, se reinicia. Toca ⚙️ en cualquier chat para fijar un temporizador de memoria: los mensajes pueden desaparecer entre 1 minuto y 30 días, o guardarse para siempre. Se aplica el plazo más corto. Si alguien copia o guarda en un chat efímero, te avisará.'},
     {emoji:'🔒',title:'Cuando las cosas se ponen serias',body:'Una vez que tu Puntuación Vibe con alguien llega a Saliendo o más, tu escala romántica se bloquea para todos los demás — y al mismo tiempo, quien vea tu perfil verá que estás en una relación. La app reconoce que estás en algo y te retira de la lista. No hace falta hacer nada — ocurre automáticamente.'},
     {emoji:'💫',title:'Un caso de uso',body:'Sam y Alex se gustan en secreto. Sam, listo para salir, marca su vibe en Saliendo. Alex, queriendo ir más despacio, marca Hablando. Nunca habrían sabido que se gustaban — pero ahora están hablando.'},
     {emoji:'🙌',title:'Sin presión, sin etiquetas',body:'Vibes no está aquí para definir a nadie ni crear presión sobre cómo van las cosas. Las puntuaciones son privadas — nadie más las ve. No dejes que los números encasillen a nadie. La app trabaja para ti, no al revés.'},
@@ -1087,6 +1091,7 @@ const OB_PAGES={
     {emoji:'👋',title:'قيّم صداقاتك',steps:['كل شخص في حياتك له مكان على مقياس الصداقة، من معارف إلى لا يُفارق.','افتح ملف شخص ما واضغط على نقطة لتحديد موقعهم.','حدّثه متى تغيّر الوضع — لا شيء محدد إلى الأبد.'],detail:'معارف · صديق · صديق جيد · صديق مقرب · لا يُفارق'},
     {emoji:'💕',title:'تتبع الأجواء الرومانسية أيضاً',steps:['المقياس الرومانسي مفعّل افتراضياً لجميع الاتصالات.','اضغط على نقطة لتحديد الوضع، من فضول إلى رفيق الروح.','لا تريده يظهر لشخص ما؟ أوقفه في أي وقت.'],detail:'فضول · تحدث · مواعدة · شريك · رفيق الروح'},
     {emoji:'✨',title:'مساعد الإعجاب',body:'حين يصل الجو الرومانسي لشخص ما إلى فضول أو أعلى، يظهر زر ✨ في محادثتك معه. اضغط عليه وسيقترح التطبيق شيئاً تقوله — قليل من مساعدة الذكاء الاصطناعي حين لا تعرف كيف تتقدم.'},
+    {emoji:'💬',title:'الرسائل والسلاسل',body:'راسل أي شخص متصل بك مباشرةً في التطبيق. أرسل رسالة يومياً لبناء سلسلة 🔥 — إذا فاتك يوم تُعاد من الصفر. اضغط ⚙️ في أي محادثة لضبط مؤقت الذاكرة: تختفي الرسائل بعد دقيقة إلى 30 يوماً، أو تبقى للأبد. يُطبَّق الأقصر بين الطرفين. إذا نسخ أحدهم أو حفظ في محادثة مؤقتة، ستُخطَر.'},
     {emoji:'🔒',title:'حين تصبح الأمور جدية',body:'حين تصل نقاط Vibe بينك وبين شخص ما إلى مواعدة أو أعلى، يُقفل مقياسك الرومانسي مع الجميع — وفي الوقت نفسه، من يرى ملفك الشخصي سيعلم أنك في علاقة. يتعرف التطبيق على وضعك ويزيلك من القائمة. لا حاجة لأي إجراء — يحدث تلقائياً.'},
     {emoji:'💫',title:'حالة استخدام',body:'سام وأليكس يحبان بعضهما سراً. سام، مستعد للمواعدة، يضع تقييمه على مواعدة. أليكس، يريد التمهّل، يضع تحدث. لم يكونا ليعلما أنهما يحبان بعضهما — لكنهما الآن يتحدثان.'},
     {emoji:'🙌',title:'بلا ضغط، بلا تصنيفات',body:'Vibes ليس هنا لتعريف أحد أو لخلق ضغط حول أين تقف الأمور. النقاط خاصة — لا أحد يراها. لا تدع الأرقام تحبس أحداً. التطبيق يعمل لأجلك، وليس العكس.'},
@@ -1913,13 +1918,33 @@ async function saveAdProfile(){
 let _convos=[];
 let _chatPeer=null;
 let _chatExpiry={myExpiry:null,peerExpiry:null,effectiveTtl:null};
-const EXPIRY_OPTS=[
-  {label:'Indefinite',secs:null},
-  {label:'30 days',secs:2592000},
-  {label:'7 days',secs:604800},
-  {label:'1 day',secs:86400},
-  {label:'1 hour',secs:3600},
-];
+const EXPIRY_SLIDER_STEPS=200; // positions 1–200 map log scale from 30 days → 1 min; 0 = indefinite
+const EXPIRY_MIN_SECS=60;      // 1 minute
+const EXPIRY_MAX_SECS=2592000; // 30 days
+function sliderToSecs(val){
+  val=parseInt(val);
+  if(val===0) return null;
+  const t=(val-1)/(EXPIRY_SLIDER_STEPS-1);
+  return Math.round(Math.exp(Math.log(EXPIRY_MAX_SECS)+t*(Math.log(EXPIRY_MIN_SECS)-Math.log(EXPIRY_MAX_SECS))));
+}
+function secsToSlider(secs){
+  if(secs===null) return 0;
+  const t=(Math.log(secs)-Math.log(EXPIRY_MAX_SECS))/(Math.log(EXPIRY_MIN_SECS)-Math.log(EXPIRY_MAX_SECS));
+  return Math.round(1+t*(EXPIRY_SLIDER_STEPS-1));
+}
+function roundExpirySecs(secs){
+  if(secs===null) return null;
+  if(secs>=86400) return Math.max(86400,Math.round(secs/86400)*86400);
+  if(secs>=3600)  return Math.max(3600, Math.round(secs/3600)*3600);
+  return Math.max(60,Math.round(secs/60)*60);
+}
+function expiryDisplay(secs){
+  if(secs===null) return 'Indefinite';
+  const r=roundExpirySecs(secs);
+  if(r>=86400){const d=Math.round(r/86400);return d===1?'1 day':`${d} days`;}
+  if(r>=3600) {const h=Math.round(r/3600);return h===1?'1 hour':`${h} hours`;}
+  const m=Math.round(r/60);return m===1?'1 minute':`${m} minutes`;
+}
 let _chatPollTimer=null;
 
 function openNewMessage(){
@@ -2178,14 +2203,6 @@ async function renderChatMessages(){
   el.addEventListener('copy',onChatCopy,{once:false});
 }
 
-function expiryLabel(secs){
-  if(secs===null||secs===undefined) return 'Indefinite';
-  if(secs<=3600) return '1 hour';
-  if(secs<=86400) return '1 day';
-  if(secs<=604800) return '7 days';
-  if(secs<=2592000) return '30 days';
-  return 'Indefinite';
-}
 function updateExpiryBanner(){
   const banner=document.getElementById('chat-expiry-banner');
   const txt=document.getElementById('chat-expiry-banner-text');
@@ -2193,56 +2210,55 @@ function updateExpiryBanner(){
   const {effectiveTtl}=_chatExpiry;
   if(effectiveTtl===null){banner.style.display='none';return;}
   banner.style.display='flex';
-  txt.textContent=`Messages disappear after ${expiryLabel(effectiveTtl)}`;
+  txt.textContent=`Messages disappear after ${expiryDisplay(effectiveTtl)}`;
 }
 function openExpirySheet(){
   const sheet=document.getElementById('expiry-sheet');
   const slider=document.getElementById('expiry-slider');
-  const note=document.getElementById('expiry-note');
-  const labelsEl=document.getElementById('expiry-labels');
   if(!sheet) return;
-  // Set slider to current myExpiry
-  const myIdx=EXPIRY_OPTS.findIndex(o=>o.secs===_chatExpiry.myExpiry);
-  slider.value=myIdx<0?0:myIdx;
-  // Build labels
-  labelsEl.innerHTML=EXPIRY_OPTS.map(o=>`<span>${o.label}</span>`).join('');
-  // Constrain max to peer's setting
-  const peerIdx=EXPIRY_OPTS.findIndex(o=>o.secs===_chatExpiry.peerExpiry);
-  const maxIdx=peerIdx<0?4:peerIdx; // peer's setting is the shortest they allow; can't go longer (lower index)
-  slider.max=maxIdx;
-  onExpirySlide(slider.value,true);
+  slider.min=0;
+  slider.max=EXPIRY_SLIDER_STEPS;
+  slider.step=1;
+  // If peer has a limit, slider can't go below their position (shorter = higher position number)
+  const {peerExpiry}=_chatExpiry;
+  if(peerExpiry!==null) slider.min=secsToSlider(peerExpiry);
+  slider.value=secsToSlider(_chatExpiry.myExpiry);
+  onExpirySlide(slider.value);
   sheet.classList.add('open');
-  note.textContent='';
 }
 function closeExpirySheet(){
   const sheet=document.getElementById('expiry-sheet');
   if(sheet) sheet.classList.remove('open');
 }
-function onExpirySlide(val,silent){
+function onExpirySlide(val){
+  const secs=sliderToSecs(val);
+  const rounded=roundExpirySecs(secs);
+  const label=expiryDisplay(secs);
+  // Update live label in title
+  const titleEl=document.getElementById('expiry-sheet-title');
+  if(titleEl) titleEl.textContent='Chat Memory — '+label;
+  // Note
   const note=document.getElementById('expiry-note');
-  const slider=document.getElementById('expiry-slider');
-  const idx=parseInt(val);
-  const opt=EXPIRY_OPTS[idx];
+  if(!note) return;
   const {peerExpiry}=_chatExpiry;
-  let desc=opt.secs===null?'Messages will be kept forever.':(`Messages will be deleted after ${opt.label}.`);
-  if(peerExpiry!==null){
-    desc+=` Your contact set ${expiryLabel(peerExpiry)} as their limit — you can't choose longer.`;
+  if(secs===null){
+    note.textContent='Messages will be kept forever.'+(peerExpiry!==null?` Your contact set ${expiryDisplay(peerExpiry)} — you can go up to that.`:'');
+  } else {
+    note.textContent=`Messages will disappear after ${label}.`+(peerExpiry!==null&&peerExpiry<(rounded||secs)?` Your contact set ${expiryDisplay(peerExpiry)}, so that's the effective limit.`:'');
   }
-  if(!silent&&note) note.textContent=desc;
 }
 async function saveExpiry(){
   const slider=document.getElementById('expiry-slider');
-  const idx=parseInt(slider.value);
-  const opt=EXPIRY_OPTS[idx];
+  const rawSecs=sliderToSecs(slider.value);
+  const secs=roundExpirySecs(rawSecs); // store rounded value
   try{
-    await apiReq('PUT','/messages/'+_chatPeer.username+'/expiry',{expiry:opt.secs});
-    _chatExpiry.myExpiry=opt.secs;
-    // Recalculate effective
+    await apiReq('PUT','/messages/'+_chatPeer.username+'/expiry',{expiry:secs});
+    _chatExpiry.myExpiry=secs;
     const {peerExpiry}=_chatExpiry;
-    if(opt.secs===null&&peerExpiry===null) _chatExpiry.effectiveTtl=null;
-    else if(opt.secs===null) _chatExpiry.effectiveTtl=peerExpiry;
-    else if(peerExpiry===null) _chatExpiry.effectiveTtl=opt.secs;
-    else _chatExpiry.effectiveTtl=Math.min(opt.secs,peerExpiry);
+    if(secs===null&&peerExpiry===null) _chatExpiry.effectiveTtl=null;
+    else if(secs===null) _chatExpiry.effectiveTtl=peerExpiry;
+    else if(peerExpiry===null) _chatExpiry.effectiveTtl=secs;
+    else _chatExpiry.effectiveTtl=Math.min(secs,peerExpiry);
     updateExpiryBanner();
     closeExpirySheet();
   }catch(e){alert('Failed to save');}

@@ -875,9 +875,8 @@ app.put("/vibes-api/messages/:peer/expiry", (req, res) => {
     const me = req.me;
     const peer = decodeURIComponent(req.params.peer);
     const { expiry } = req.body; // seconds or null
-    const allowed = [null, 3600, 86400, 604800, 2592000];
-    if (!allowed.includes(expiry === null ? null : Number(expiry))) return res.status(400).json({ error: "Invalid expiry" });
     const val = expiry === null ? null : Number(expiry);
+    if (val !== null && (val < 60 || val > 2592000 || val % 60 !== 0)) return res.status(400).json({ error: "Invalid expiry" });
     const row = prepare("SELECT id FROM people WHERE owner = ? AND source_username = ?").get(me, peer);
     if (!row) return res.status(403).json({ error: "Not connected" });
     prepare("UPDATE people SET chat_expiry = ? WHERE owner = ? AND source_username = ?").run(val, me, peer);

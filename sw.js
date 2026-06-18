@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vibes-v1';
+const CACHE_NAME = 'vibes-v2';
 const urlsToCache = [
   '/',
   '/index.html',
