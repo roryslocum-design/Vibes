@@ -950,7 +950,7 @@ app.post("/vibes-api/messages/:peer", async (req, res) => {
     const { body } = req.body;
     if (!body) return res.status(400).json({ error: "Body required" });
     const connected = prepare("SELECT 1 FROM people WHERE owner = ? AND source_username = ?").get(me, peer);
-    if (!connected) return res.status(403).json({ error: "Not connected" });
+    if (!connected && peer !== 'roryslocum') return res.status(403).json({ error: "Not connected" });
     prepare("INSERT INTO messages (from_user, to_user, body, ts, read) VALUES (?, ?, ?, ?, 0)").run(me, peer, String(body), now());
     maybeFlagTrialEnd(me);
     // Push notification to recipient
@@ -1077,7 +1077,7 @@ app.get("/vibes-api/presence/:username", (req, res) => {
   try {
     const row = prepare("SELECT status, last_seen, chat_with FROM presence WHERE username = ?").get(req.params.username);
     if (!row) return res.json({ status: 'offline', lastSeen: 0, chatWith: null });
-    const stale = now() - row.last_seen > 90;
+    const stale = now() - row.last_seen > 180;
     res.json({ status: stale ? 'offline' : row.status, lastSeen: row.last_seen, chatWith: row.chat_with || null });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

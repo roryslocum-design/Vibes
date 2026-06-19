@@ -456,14 +456,26 @@
   </div>
   <div class="people-search-wrap" id="people-search-wrap">
     <input class="people-search" id="people-search" type="text" placeholder="Search added people…" autocomplete="off" oninput="renderPeople()" onblur="this.value='';renderPeople()"/>
-    <div id="feedback-msg" style="font-size:.82rem;color:var(--muted);padding:.4rem 0 0;text-align:center;width:100%;">Feedback for the app? Message Rory</div>
   </div>
   <div class="people-search-wrap" id="msg-search-wrap">
     <input class="people-search" id="msg-search" type="text" placeholder="Search messages…" autocomplete="off" oninput="filterMessages()"/>
   </div>
   <div class="content">
     <div class="pane show" id="pane-people"><div id="people-body"></div></div>
-    <div class="pane" id="pane-messages"><div id="messages-body"></div></div>
+    <div class="pane" id="pane-messages">
+      <div onclick="openFeedbackChat()" style="margin:.75rem 1rem .25rem;border-radius:20px;overflow:hidden;cursor:pointer;position:relative;backdrop-filter:blur(24px) saturate(1.8);-webkit-backdrop-filter:blur(24px) saturate(1.8);background:linear-gradient(145deg,rgba(255,255,255,.13) 0%,rgba(255,255,255,.04) 40%,rgba(255,255,255,.09) 100%);border:1px solid rgba(255,255,255,.18);box-shadow:0 2px 12px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(0,0,0,.1);">
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.08) 0%,transparent 50%,rgba(0,0,0,.06) 100%);pointer-events:none;border-radius:20px;"></div>
+        <div style="padding:.75rem 1rem;display:flex;align-items:center;gap:.85rem;position:relative;">
+          <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.3);">💬</div>
+          <div style="flex:1;min-width:0;">
+            <div id="feedback-msg" style="font-size:.86rem;font-weight:600;color:rgba(255,255,255,.88);">Feedback for the app? Message Rory</div>
+            <div style="font-size:.73rem;color:rgba(255,255,255,.4);margin-top:.05rem;">tap to send a message</div>
+          </div>
+          <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style="opacity:.3;flex-shrink:0"><path d="M1 1l5 5-5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div id="messages-body"></div>
+    </div>
     <div class="pane" id="pane-settings"><div id="settings-body"></div></div>
   </div>
   <div style="position:fixed;bottom:0;left:0;right:0;height:60px;background:#1c1c1e;z-index:9;pointer-events:none;"></div>
@@ -1547,6 +1559,10 @@ function renderSearch(){
   },300);
 }
 
+function openFeedbackChat(){
+  openChat('roryslocum','Rory',null,0);
+}
+
 async function sendRequest(toUsername){
   await apiReq('POST','/requests/send',{toUsername});
   renderSearch();
@@ -2094,7 +2110,13 @@ async function pollMessages(){
 async function renderMessages(){
   const el=document.getElementById('messages-body');
   let convos;
-  try{convos=await apiReq('GET','/messages');}catch(e){el.innerHTML=`<div class="empty"><div class="empty-sub">${L('couldntLoad')}</div></div>`;return;}
+  try{convos=await apiReq('GET','/messages');}catch(e){
+    // Retry once after 3s (covers Railway restart window after deploy)
+    await new Promise(r=>setTimeout(r,3000));
+    try{convos=await apiReq('GET','/messages');}catch(e2){
+      el.innerHTML=`<div class="empty"><div class="empty-sub">${L('couldntLoad')}</div></div>`;return;
+    }
+  }
   _convos=convos;
   if(!convos.length){
     el.innerHTML=`<div class="empty"><div class="empty-ico">💬</div><div class="empty-ttl">${L('noMsgTitle')}</div><div class="empty-sub">${L('noMsgSub')}</div></div>`;
@@ -2163,6 +2185,15 @@ function filterMessages(){
       </div>
     </div>`;
   }).join('')}</div></div>`;
+}
+
+function formatLastSeen(ts){
+  const diff=Date.now()-ts*1000;
+  if(diff<60000) return 'just now';
+  if(diff<3600000) return Math.floor(diff/60000)+'m ago';
+  if(diff<86400000) return Math.floor(diff/3600000)+'h ago';
+  if(diff<172800000) return 'yesterday';
+  return Math.floor(diff/86400000)+'d ago';
 }
 
 function formatMsgTs(ts){
@@ -2602,7 +2633,7 @@ async function updateChatPresence(){
         html=`${dot}away`;
       }
     } else {
-      const lastSeenText=presenceRes.lastSeen>0?` ${formatMsgTs(presenceRes.lastSeen)}`:'';
+      const lastSeenText=presenceRes.lastSeen>0?` ${formatLastSeen(presenceRes.lastSeen)}`:'';
       html=`<span class="presence-badge offline"></span>last seen${lastSeenText}`;
     }
     statusEl.innerHTML=html;
