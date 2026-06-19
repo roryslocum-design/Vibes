@@ -267,6 +267,19 @@
     .presence-badge.away{background:var(--muted);}
     .presence-badge.offline{background:var(--s3);}
     .chat-peer-status{font-size:.68rem;color:var(--muted);margin-top:.15rem;display:flex;align-items:center;gap:.3rem;}
+    .reaction-row{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem;padding:0 .2rem;}
+    .reaction-pill{display:inline-flex;align-items:center;gap:.25rem;background:var(--s2);border:1.5px solid transparent;border-radius:20px;padding:.18rem .55rem;font-size:.82rem;cursor:pointer;transition:background .15s,border-color .15s;user-select:none;}
+    .reaction-pill.mine{border-color:var(--blue);background:rgba(0,122,255,.1);}
+    .reaction-pill .rc{font-size:.78rem;color:var(--muted);}
+    .emoji-picker{position:fixed;z-index:9999;background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:.45rem .6rem;display:flex;gap:.35rem;box-shadow:0 8px 30px rgba(0,0,0,.3);animation:popIn .12s ease;}
+    @keyframes popIn{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+    .emoji-picker button{background:none;border:none;font-size:1.4rem;cursor:pointer;padding:.15rem .1rem;border-radius:8px;transition:background .1s;}
+    .emoji-picker button:hover{background:var(--s2);}
+    .typing-dots{display:inline-flex;gap:3px;align-items:center;margin-left:2px;}
+    .typing-dots span{width:4px;height:4px;border-radius:50%;background:currentColor;animation:tdot .9s infinite ease-in-out both;}
+    .typing-dots span:nth-child(2){animation-delay:.15s;}
+    .typing-dots span:nth-child(3){animation-delay:.3s;}
+    @keyframes tdot{0%,80%,100%{transform:scale(.6);opacity:.4;}40%{transform:scale(1);opacity:1;}}
     .chat-input-wrap{display:flex;align-items:flex-end;gap:.6rem;padding:.7rem 1rem calc(env(safe-area-inset-bottom,20px) + .7rem);border-top:.5px solid var(--sep);background:var(--bg);flex-shrink:0;}
     .chat-input{flex:1;padding:.65rem .95rem;border-radius:20px;border:1px solid var(--sep);background:var(--s1);color:var(--text);font-size:.95rem;font-family:inherit;outline:none;resize:none;max-height:100px;line-height:1.4;}
     .chat-input:focus{border-color:var(--blue);}
@@ -501,6 +514,17 @@
     </div>
     <div class="expiry-note" id="expiry-note"></div>
     <button class="expiry-save-btn" onclick="saveExpiry()">Save</button>
+    <div style="border-top:1px solid var(--border);padding-top:.9rem;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:.88rem;font-weight:600">Chat Background</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.1rem" id="bg-status">No background set</div>
+      </div>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn-ghost" style="font-size:.8rem;padding:.4rem .75rem;border-radius:10px" onclick="document.getElementById('chat-bg-input').click()">Upload</button>
+        <button class="btn-ghost" id="bg-remove-btn" style="font-size:.8rem;padding:.4rem .75rem;border-radius:10px;display:none;color:var(--red)" onclick="removeChatBg()">Remove</button>
+      </div>
+    </div>
+    <input type="file" id="chat-bg-input" accept="image/*" style="display:none" onchange="setChatBg(this)"/>
   </div>
 </div>
   <div class="rizz-bar" id="rizz-bar"></div>
@@ -1292,7 +1316,7 @@ function enterApp(){
   setInterval(pollMessages,8000);
   // Update presence when app loads and periodically
   updatePresence('online');
-  setInterval(()=>updatePresence('online'),60000); // Every 60 seconds
+  setInterval(()=>updatePresence('online',_chatPeer?_chatPeer.username:null),60000);
   fetch(API+'/track/open',{method:'POST',headers:apiHeaders()}).catch(()=>{});
   registerPush();
 }
@@ -2174,16 +2198,16 @@ async function openChat(username, name, photoDataUrl, streakCount){
   }
   document.getElementById('chat-screen').classList.add('show');
   document.getElementById('chat-input').value='';
-  
+  applyChatBg();
+
   // Update presence when opening chat
-  await updatePresence('online');
+  await updatePresence('online', username);
   
   await renderChatMessages();
   clearInterval(_chatPollTimer);
   _chatPollTimer=setInterval(async()=>{
     await renderChatMessages();
     await updateChatPresence();
-    await checkTypingStatus();
   },3000);
 }
 
@@ -2193,8 +2217,8 @@ function closeChat(){
   sc.classList.remove('show');
   clearInterval(_chatPollTimer);
   if(_chatPeer){
-    // Clear typing indicator
     apiReq('POST','/typing/'+_chatPeer.username,{typing:false}).catch(()=>{});
+    updatePresence('online',null);
   }
   _chatPeer=null;
   if(curTab==='messages') renderMessages();
@@ -2276,8 +2300,18 @@ async function renderChatMessages(){
         ?`<video src="${m.body}" controls playsinline preload="metadata" style="max-width:100%;border-radius:10px;display:block;"></video>`
         :esc(m.body);
     const receipt=(mine&&i===lastReadIdx)?`<div class="read-receipt">${L('readReceipt')}</div>`:'';
-    return `<div class="bubble-wrap ${mine?'mine':'theirs'}">
-      <div class="bubble ${mine?'mine':'theirs'}${isMedia?' img-bubble':''}">${bubbleContent}</div>
+    const rxns=m.reactions||[];
+    const rxnMap={};
+    for(const r of rxns){rxnMap[r.emoji]=(rxnMap[r.emoji]||[]);rxnMap[r.emoji].push(r.username);}
+    const rxnHtml=Object.keys(rxnMap).length
+      ?`<div class="reaction-row">${Object.entries(rxnMap).map(([emoji,users])=>{
+          const iMine=users.includes(me);
+          return `<button class="reaction-pill${iMine?' mine':''}" onclick="toggleReaction(${m.id},'${emoji}')">${emoji}${users.length>1?`<span class="rc">${users.length}</span>`:''}</button>`;
+        }).join('')}</div>`
+      :'';
+    return `<div class="bubble-wrap ${mine?'mine':'theirs'}" data-msg-id="${m.id}">
+      <div class="bubble ${mine?'mine':'theirs'}${isMedia?' img-bubble':''}" oncontextmenu="showEmojiPicker(event,${m.id})" onmousedown="startLongPress(event,${m.id})" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" ontouchstart="startLongPress(event,${m.id})" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()">${bubbleContent}</div>
+      ${rxnHtml}
       <div class="bubble-ts">${formatMsgTs(m.ts)}${receipt}</div>
     </div>`;
   }).join('')||`<div class="empty" style="margin:auto"><div class="empty-ico">👋</div><div class="empty-sub">${L('sayHello')}</div></div>`;
@@ -2335,7 +2369,52 @@ function openExpirySheet(){
   slider.value=secsToSlider(_chatExpiry.myExpiry);
   updateExpiryBenchmarks(minPos);
   onExpirySlide(slider.value);
+  updateBgStatus();
   sheet.classList.add('open');
+}
+function updateBgStatus(){
+  if(!_chatPeer) return;
+  const key='vb_chat_bg_'+_chatPeer.username;
+  const has=!!localStorage.getItem(key);
+  const status=document.getElementById('bg-status');
+  const removeBtn=document.getElementById('bg-remove-btn');
+  if(status) status.textContent=has?'Custom background set':'No background set';
+  if(removeBtn) removeBtn.style.display=has?'':'none';
+}
+function applyChatBg(){
+  const el=document.getElementById('chat-messages');
+  if(!el||!_chatPeer) return;
+  const bg=localStorage.getItem('vb_chat_bg_'+_chatPeer.username);
+  if(bg){el.style.backgroundImage=`url(${bg})`;el.style.backgroundSize='cover';el.style.backgroundPosition='center';}
+  else{el.style.backgroundImage='';el.style.backgroundSize='';el.style.backgroundPosition='';}
+}
+function setChatBg(input){
+  if(!_chatPeer||!input.files||!input.files[0]) return;
+  const file=input.files[0];
+  input.value='';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=1200;
+      let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      localStorage.setItem('vb_chat_bg_'+_chatPeer.username,canvas.toDataURL('image/jpeg',0.8));
+      applyChatBg();
+      updateBgStatus();
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function removeChatBg(){
+  if(!_chatPeer) return;
+  localStorage.removeItem('vb_chat_bg_'+_chatPeer.username);
+  applyChatBg();
+  updateBgStatus();
 }
 function closeExpirySheet(){
   const sheet=document.getElementById('expiry-sheet');
@@ -2477,12 +2556,12 @@ async function sendChatMedia(input){
 let _typingTimeout=null;
 let _presenceUpdateTime=0;
 
-async function updatePresence(status){
+async function updatePresence(status, chatWith){
   try{
     const now=Date.now();
-    if(now-_presenceUpdateTime<5000) return; // Throttle to 5s
+    if(chatWith===undefined&&now-_presenceUpdateTime<5000) return;
     _presenceUpdateTime=now;
-    await apiReq('POST','/presence/update',{status:status||'online'}).catch(()=>{});
+    await apiReq('POST','/presence/update',{status:status||'online',chatWith:chatWith??null}).catch(()=>{});
   }catch(e){}
 }
 
@@ -2500,25 +2579,90 @@ async function trackTyping(){
 async function updateChatPresence(){
   if(!_chatPeer) return;
   try{
-    const presenceRes=await apiReq('GET','/presence/'+_chatPeer.username);
+    const [presenceRes,typingRes]=await Promise.all([
+      apiReq('GET','/presence/'+_chatPeer.username),
+      apiReq('GET','/typing/'+_chatPeer.username)
+    ]);
     const statusEl=document.getElementById('chat-peer-status');
-    const statusTexts={
-      'online':'Online',
-      'away':'Away',
-      'offline':'Last seen'
-    };
-    const badge=`<div class="presence-badge ${presenceRes.status}"></div>`;
-    const statusText=statusTexts[presenceRes.status]||'Offline';
-    const lastSeenText=presenceRes.lastSeen>0?` ${formatMsgTs(presenceRes.lastSeen)}`:'';
-    statusEl.innerHTML=`${badge}${statusText}${lastSeenText}`;
+    if(typingRes&&typingRes.typing){
+      statusEl.innerHTML=`<span style="color:var(--green)">typing<span class="typing-dots"><span></span><span></span><span></span></span></span>`;
+      statusEl.style.display='';
+      return;
+    }
+    const st=presenceRes.status;
+    const inChat=presenceRes.chatWith===me;
+    let html='';
+    if(st==='online'||st==='away'){
+      const dot=`<span class="presence-badge ${st}"></span>`;
+      if(inChat){
+        html=`${dot}<span style="color:var(--green)">reading</span>`;
+      } else if(st==='online'){
+        html=`${dot}active now`;
+      } else {
+        html=`${dot}away`;
+      }
+    } else {
+      const lastSeenText=presenceRes.lastSeen>0?` ${formatMsgTs(presenceRes.lastSeen)}`:'';
+      html=`<span class="presence-badge offline"></span>last seen${lastSeenText}`;
+    }
+    statusEl.innerHTML=html;
     statusEl.style.display='';
   }catch(e){}
 }
 
-async function checkTypingStatus(){
+// ── Reactions ─────────────────────────────────────────────────────────────────
+const QUICK_EMOJIS=['❤️','😂','😮','😢','👍','🔥'];
+let _longPressTimer=null;
+let _pickerEl=null;
+
+function showEmojiPicker(e, msgId){
+  e.preventDefault();
+  _openEmojiPicker(e.clientX, e.clientY, msgId);
+}
+
+function startLongPress(e, msgId){
+  if(e.button!==undefined&&e.button!==0) return; // only left mouse button
+  cancelLongPress();
+  const src=e.touches?e.touches[0]:e;
+  const x=src.clientX, y=src.clientY;
+  _longPressTimer=setTimeout(()=>{ _openEmojiPicker(x,y,msgId); }, 480);
+}
+
+function cancelLongPress(){
+  clearTimeout(_longPressTimer);
+  _longPressTimer=null;
+}
+
+function _openEmojiPicker(x, y, msgId){
+  _closeEmojiPicker();
+  const el=document.createElement('div');
+  el.className='emoji-picker';
+  QUICK_EMOJIS.forEach(emoji=>{
+    const btn=document.createElement('button');
+    btn.textContent=emoji;
+    btn.onclick=()=>{ toggleReaction(msgId,emoji); _closeEmojiPicker(); };
+    el.appendChild(btn);
+  });
+  document.body.appendChild(el);
+  _pickerEl=el;
+  const W=window.innerWidth, H=window.innerHeight;
+  const pw=el.offsetWidth||220, ph=el.offsetHeight||56;
+  let left=x-pw/2, top=y-ph-12;
+  left=Math.max(8,Math.min(left,W-pw-8));
+  top=top<8?y+16:top;
+  el.style.left=left+'px'; el.style.top=top+'px';
+  setTimeout(()=>document.addEventListener('click',_closeEmojiPicker,{once:true}),0);
+}
+
+function _closeEmojiPicker(){
+  if(_pickerEl){ _pickerEl.remove(); _pickerEl=null; }
+}
+
+async function toggleReaction(msgId, emoji){
   if(!_chatPeer) return;
   try{
-    const typingRes=await apiReq('GET','/typing/'+_chatPeer.username);
+    await apiReq('POST','/messages/'+_chatPeer.username+'/react',{msgId,emoji});
+    await renderChatMessages();
   }catch(e){}
 }
 

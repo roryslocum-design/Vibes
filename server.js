@@ -194,6 +194,8 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 );
 `);
 try { db.exec(`ALTER TABLE people ADD COLUMN chat_expiry INTEGER DEFAULT NULL`); } catch (e) {}
+try { db.exec(`ALTER TABLE presence ADD COLUMN chat_with TEXT DEFAULT NULL`); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS reactions (msg_id INTEGER NOT NULL, username TEXT NOT NULL, emoji TEXT NOT NULL, PRIMARY KEY (msg_id, username))`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN avatar_color TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'best'`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN trial_active INTEGER DEFAULT 1`); } catch (e) {}
@@ -868,8 +870,17 @@ app.get("/vibes-api/messages/:peer", (req, res) => {
     }
     const msgs = prepare("SELECT * FROM messages WHERE (from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?) ORDER BY ts ASC").all(me, peer, peer, me);
     prepare("UPDATE messages SET read = 1 WHERE from_user = ? AND to_user = ?").run(peer, me);
+    const msgIds = msgs.map(m => m.id);
+    const reactions = msgIds.length
+      ? prepare(`SELECT msg_id, username, emoji FROM reactions WHERE msg_id IN (${msgIds.map(()=>'?').join(',')}) ORDER BY rowid ASC`).all(...msgIds)
+      : [];
+    const reactionsByMsg = {};
+    for (const r of reactions) {
+      if (!reactionsByMsg[r.msg_id]) reactionsByMsg[r.msg_id] = [];
+      reactionsByMsg[r.msg_id].push({ username: r.username, emoji: r.emoji });
+    }
     res.json({
-      messages: msgs.map((m) => ({ id: m.id, from: m.from_user, to: m.to_user, body: m.body, ts: m.ts, read: !!m.read })),
+      messages: msgs.map((m) => ({ id: m.id, from: m.from_user, to: m.to_user, body: m.body, ts: m.ts, read: !!m.read, reactions: reactionsByMsg[m.id] || [] })),
       myExpiry,
       peerExpiry,
       effectiveTtl
@@ -878,6 +889,24 @@ app.get("/vibes-api/messages/:peer", (req, res) => {
     console.error(`Error in /vibes-api/messages/${req.params.peer} GET:`, e);
     res.status(500).json({ error: e.message || "Server error" });
   }
+});
+
+app.post("/vibes-api/messages/:peer/react", (req, res) => {
+  try {
+    const me = req.me;
+    const peer = decodeURIComponent(req.params.peer);
+    const { msgId, emoji } = req.body;
+    if (!msgId || !emoji) return res.status(400).json({ error: "Missing msgId or emoji" });
+    const msg = prepare("SELECT id FROM messages WHERE id = ? AND (from_user IN (?,?) AND to_user IN (?,?))").get(msgId, me, peer, me, peer);
+    if (!msg) return res.status(403).json({ error: "Message not found" });
+    const existing = prepare("SELECT emoji FROM reactions WHERE msg_id = ? AND username = ?").get(msgId, me);
+    if (existing && existing.emoji === emoji) {
+      prepare("DELETE FROM reactions WHERE msg_id = ? AND username = ?").run(msgId, me);
+    } else {
+      prepare("INSERT INTO reactions (msg_id, username, emoji) VALUES (?,?,?) ON CONFLICT(msg_id,username) DO UPDATE SET emoji=excluded.emoji").run(msgId, me, emoji);
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put("/vibes-api/messages/:peer/expiry", (req, res) => {
@@ -1028,6 +1057,53 @@ app.delete("/vibes-api/push/subscribe", (req, res) => {
 
 // MISC
 app.post("/vibes-api/track/open", (req, res) => res.json({ ok: true }));
+
+// Presence
+app.post("/vibes-api/presence/update", (req, res) => {
+  try {
+    const me = req.me;
+    const status = req.body.status || 'online';
+    const chatWith = req.body.chatWith || null;
+    const n = now();
+    prepare(`INSERT INTO presence (username, status, last_seen, last_active, chat_with)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(username) DO UPDATE SET status=excluded.status, last_seen=excluded.last_seen, last_active=excluded.last_active, chat_with=excluded.chat_with`
+    ).run(me, status, n, n, chatWith);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/vibes-api/presence/:username", (req, res) => {
+  try {
+    const row = prepare("SELECT status, last_seen, chat_with FROM presence WHERE username = ?").get(req.params.username);
+    if (!row) return res.json({ status: 'offline', lastSeen: 0, chatWith: null });
+    const stale = now() - row.last_seen > 90;
+    res.json({ status: stale ? 'offline' : row.status, lastSeen: row.last_seen, chatWith: row.chat_with || null });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Typing indicators
+app.post("/vibes-api/typing/:peer", (req, res) => {
+  try {
+    const me = req.me;
+    const peer = req.params.peer;
+    if (req.body.typing) {
+      prepare(`INSERT INTO typing_indicators (username, peer, typing_at) VALUES (?, ?, ?)
+        ON CONFLICT(username, peer) DO UPDATE SET typing_at=excluded.typing_at`).run(me, peer, now());
+    } else {
+      prepare("DELETE FROM typing_indicators WHERE username = ? AND peer = ?").run(me, peer);
+    }
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/vibes-api/typing/:peer", (req, res) => {
+  try {
+    const row = prepare("SELECT typing_at FROM typing_indicators WHERE username = ? AND peer = ?").get(req.params.peer, req.me);
+    const typing = row && (now() - row.typing_at) < 5;
+    res.json({ typing: !!typing });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 
 // Handle 404 for API routes
 app.use("/vibes-api", (req, res) => {
