@@ -935,7 +935,7 @@ function initObSwipe(){
   document.addEventListener('touchend',end,{passive:true});
   document.addEventListener('mouseup',end);
 }
-function obClose(e){if(e&&e.target!==document.getElementById('ob-overlay'))return;document.getElementById('ob-overlay').classList.remove('show');if(me){localStorage.setItem('vb_seen_ob_'+me,'1');}}
+function obClose(e){if(e&&e.target!==document.getElementById('ob-overlay'))return;document.getElementById('ob-overlay').classList.remove('show');localStorage.setItem('vb_seen_ob','1');if(me){localStorage.setItem('vb_seen_ob_'+me,'1');}}
 
 const LANG_STRINGS={
   en:{
@@ -1261,7 +1261,7 @@ async function authGo(){
     errEl.textContent='';
     enterApp();
     if(isSignUp) setTimeout(()=>{goTab('settings',document.getElementById('tab-settings'));openProfileEdit();},100);
-    if(isSignUp && !localStorage.getItem('vb_seen_ob_'+u)){
+    if(isSignUp && !localStorage.getItem('vb_seen_ob_'+u) && !localStorage.getItem('vb_seen_ob')){
       setTimeout(()=>obOpen(),300);
     }
   }catch(e){errEl.textContent=(typeof e==='object'?e?.error:e)||'Something went wrong';}
