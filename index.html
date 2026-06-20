@@ -35,6 +35,21 @@
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
     body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;height:100dvh;overflow:hidden;user-select:none;}
 
+    /* ADMIN */
+    .admin-stat-row{display:flex;gap:.75rem;padding:.5rem 1rem 0;}
+    .admin-stat{flex:1;background:var(--s2);border-radius:16px;padding:.9rem .8rem;text-align:center;}
+    .admin-stat-val{font-size:1.6rem;font-weight:800;}
+    .admin-stat-lbl{font-size:.7rem;color:var(--muted);margin-top:.15rem;}
+    .admin-chart{padding:1rem 1rem 0;}
+    .admin-chart-title{font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.04em;}
+    .admin-user-row{display:flex;align-items:center;gap:.75rem;padding:.65rem 1rem;border-bottom:1px solid var(--sep);}
+    .admin-user-row:last-child{border-bottom:none;}
+    .admin-user-info{flex:1;min-width:0;}
+    .admin-user-name{font-size:.9rem;font-weight:600;}
+    .admin-user-handle{font-size:.75rem;color:var(--muted);}
+    .admin-ban-btn{font-size:.75rem;font-weight:600;padding:.35rem .75rem;border-radius:10px;border:none;cursor:pointer;font-family:inherit;}
+    .admin-ban-btn.ban{background:rgba(255,59,48,.15);color:var(--red);}
+    .admin-ban-btn.unban{background:rgba(52,199,89,.15);color:var(--green);}
     /* SPLASH */
     #splash{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
     #splash.visible{opacity:1;}
@@ -502,12 +517,14 @@
       <div id="messages-body"></div>
     </div>
     <div class="pane" id="pane-settings"><div id="settings-body"></div></div>
+    <div class="pane" id="pane-admin" style="overflow-y:auto"><div id="admin-body"></div></div>
   </div>
   <div style="position:fixed;bottom:0;left:0;right:0;height:60px;background:#1c1c1e;z-index:9;pointer-events:none;"></div>
   <div class="tab-bar">
     <button class="tab on" id="tab-people" onclick="goTab('people',this)"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div><div class="tab-lbl" id="tab-lbl-people">People</div></button>
     <button class="tab" id="tab-messages" onclick="goTab('messages',this)" style="position:relative"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div><div class="tab-lbl" id="tab-lbl-messages">Messages</div><div id="msg-tab-badge" style="display:none" class="tab-badge"></div></button>
     <button class="tab" id="tab-settings" onclick="goTab('settings',this)"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div><div class="tab-lbl" id="tab-lbl-profile">Profile</div></button>
+    <button class="tab" id="tab-admin" style="display:none" onclick="goTab('admin',this)"><div class="tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm14 3v-3h-3v2h2v1h-2v2h3v-2zM18 14h2v2h-2zm0 4h2v2h-2z"/></svg></div><div class="tab-lbl">Admin</div></button>
   </div>
 </div>
 
@@ -1355,6 +1372,7 @@ function enterApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').classList.add('show');
   document.getElementById('people-search-wrap').classList.add('show');
+  if(me==='roryslocum') document.getElementById('tab-admin').style.display='';
   loadMe().then(consumePendingInvite).then(checkPaywall);
   setInterval(loadMe,30000);
   setInterval(pollMessages,8000);
@@ -1420,8 +1438,9 @@ function goTab(t,btn){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
   document.getElementById('pane-'+t).classList.add('show');
   btn.classList.add('on');
-  const titles={people:L('people'),messages:L('messages'),settings:L('profile')};
-  document.getElementById('ntitle').textContent=titles[t];
+  const titles={people:L('people'),messages:L('messages'),settings:L('profile'),admin:'Admin'};
+  document.getElementById('ntitle').textContent=titles[t]||t;
+  if(t==='admin') renderAdmin();
   document.getElementById('nplus-wrap').style.display=t==='people'?'':'none';
   document.getElementById('ncompose-wrap').style.display=t==='messages'?'':'none';
   const msw=document.getElementById('msg-search-wrap');
@@ -2751,6 +2770,74 @@ async function toggleReaction(msgId, emoji){
   }catch(e){}
 }
 
+// ── Admin ─────────────────────────────────────────────────────────────────────
+async function renderAdmin(){
+  const el=document.getElementById('admin-body');
+  el.innerHTML=`<div style="padding:1.5rem 1rem;color:var(--muted);text-align:center;font-size:.85rem">Loading…</div>`;
+  try{
+    const [stats,users]=await Promise.all([
+      apiReq('GET','/admin/stats'),
+      apiReq('GET','/admin/users')
+    ]);
+    const maxViews=Math.max(...stats.views.map(v=>v.count),1);
+    const chartH=80;
+    const barW=Math.floor(280/stats.views.length)-2;
+    const bars=stats.views.map((v,i)=>{
+      const h=Math.max(3,Math.round((v.count/maxViews)*chartH));
+      const x=i*(barW+2);
+      const label=v.date.slice(5); // MM-DD
+      return `<g>
+        <rect x="${x}" y="${chartH-h}" width="${barW}" height="${h}" rx="3" fill="url(#bg)"/>
+        ${i%3===0?`<text x="${x+barW/2}" y="${chartH+12}" text-anchor="middle" font-size="7" fill="var(--muted)">${label}</text>`:''}
+      </g>`;
+    }).join('');
+    const installPct=stats.totalUsers>0?Math.round((stats.totalInstalls/stats.totalUsers)*100):0;
+    el.innerHTML=`
+      <div style="padding:1.2rem 1rem .5rem;font-size:1rem;font-weight:700">Overview</div>
+      <div class="admin-stat-row">
+        <div class="admin-stat"><div class="admin-stat-val">${stats.totalUsers}</div><div class="admin-stat-lbl">Accounts</div></div>
+        <div class="admin-stat"><div class="admin-stat-val">${stats.totalInstalls}</div><div class="admin-stat-lbl">Installs</div></div>
+        <div class="admin-stat"><div class="admin-stat-val">${installPct}%</div><div class="admin-stat-lbl">Install rate</div></div>
+      </div>
+      <div class="admin-chart">
+        <div class="admin-chart-title">Page Views — Last 14 Days</div>
+        <svg width="100%" viewBox="0 0 ${stats.views.length*(barW+2)} ${chartH+16}" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a84ff"/><stop offset="100%" stop-color="#0a84ff" stop-opacity=".4"/></linearGradient></defs>
+          ${bars}
+        </svg>
+      </div>
+      <div style="padding:1.2rem 1rem .5rem;font-size:1rem;font-weight:700">Accounts</div>
+      <div class="sec"><div class="card-list" style="padding:0">
+        ${users.filter(u=>u.username!=='roryslocum').map(u=>{
+          const av=u.photoDataUrl
+            ?`<div class="av av-sm">${mediaElement(u.photoDataUrl)}</div>`
+            :`<div class="av av-sm" style="background:linear-gradient(135deg,#5e5ce6,#ff375f);font-size:.75rem;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center">${esc(ini(u.displayName))}</div>`;
+          return `<div class="admin-user-row">
+            ${av}
+            <div class="admin-user-info">
+              <div class="admin-user-name">${esc(u.displayName)}</div>
+              <div class="admin-user-handle">@${esc(u.username)}</div>
+            </div>
+            ${u.banned
+              ?`<button class="admin-ban-btn unban" onclick="adminUnban('${esc(u.username)}')">Restore</button>`
+              :`<button class="admin-ban-btn ban" onclick="adminBan('${esc(u.username)}')">Remove</button>`}
+          </div>`;
+        }).join('')||'<div style="padding:1rem;color:var(--muted);font-size:.85rem;text-align:center">No other accounts</div>'}
+      </div></div>
+      <div style="height:2rem"></div>`;
+  }catch(e){el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--muted)">Failed to load</div>`;}
+}
+
+async function adminBan(username){
+  if(!confirm(`Remove @${username}? They won't be able to log in.`))return;
+  await apiReq('POST',`/admin/users/${username}/ban`);
+  renderAdmin();
+}
+async function adminUnban(username){
+  await apiReq('POST',`/admin/users/${username}/unban`);
+  renderAdmin();
+}
+
 // ── Splash & Connectivity ─────────────────────────────────────────────────────
 let _splashTimer=null;
 function armSplash(){
@@ -2808,7 +2895,7 @@ if('serviceWorker' in navigator){
 let deferredPrompt=null;
 
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;_installAvailable=true;});
-window.addEventListener('appinstalled',()=>{deferredPrompt=null;_installAvailable=false;});
+window.addEventListener('appinstalled',()=>{deferredPrompt=null;_installAvailable=false;fetch(API+'/track/install',{method:'POST',headers:apiHeaders()}).catch(()=>{});});
 function showInstallBanner(){}
 function hideInstallBanner(){}
 function dismissInstallBanner(){}

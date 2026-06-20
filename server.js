@@ -196,6 +196,9 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 try { db.exec(`ALTER TABLE people ADD COLUMN chat_expiry INTEGER DEFAULT NULL`); } catch (e) {}
 try { db.exec(`ALTER TABLE presence ADD COLUMN chat_with TEXT DEFAULT NULL`); } catch (e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS reactions (msg_id INTEGER NOT NULL, username TEXT NOT NULL, emoji TEXT NOT NULL, PRIMARY KEY (msg_id, username))`); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS page_views (date TEXT PRIMARY KEY, count INTEGER DEFAULT 0)`); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS pwa_installs (ts INTEGER NOT NULL)`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN avatar_color TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'best'`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN trial_active INTEGER DEFAULT 1`); } catch (e) {}
@@ -238,8 +241,9 @@ function authenticate(req) {
   const u = req.headers['x-username'];
   const p = req.headers['x-password'];
   if (!u || !p) return null;
-  const row = prepare("SELECT password FROM users WHERE username = ?").get(u);
+  const row = prepare("SELECT password, banned FROM users WHERE username = ?").get(u);
   if (!row || !verifyPassword(p, row.password, u)) return null;
+  if (row.banned) return null;
   return u;
 }
 
@@ -1078,7 +1082,51 @@ app.delete("/vibes-api/push/subscribe", (req, res) => {
 });
 
 // MISC
-app.post("/vibes-api/track/open", (req, res) => res.json({ ok: true }));
+app.post("/vibes-api/track/open", (req, res) => {
+  const date = new Date().toISOString().slice(0, 10);
+  prepare(`INSERT INTO page_views (date, count) VALUES (?, 1) ON CONFLICT(date) DO UPDATE SET count = count + 1`).run(date);
+  res.json({ ok: true });
+});
+
+app.post("/vibes-api/track/install", (req, res) => {
+  prepare("INSERT INTO pwa_installs (ts) VALUES (?)").run(now());
+  res.json({ ok: true });
+});
+
+// Admin endpoints (roryslocum only)
+function requireAdmin(req, res, next) {
+  if (req.me !== 'roryslocum') return res.status(403).json({ error: 'Forbidden' });
+  next();
+}
+
+app.get("/vibes-api/admin/stats", requireAdmin, (req, res) => {
+  const days = 14;
+  const views = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const date = d.toISOString().slice(0, 10);
+    const row = prepare("SELECT count FROM page_views WHERE date = ?").get(date);
+    views.push({ date, count: row ? row.count : 0 });
+  }
+  const totalUsers = prepare("SELECT COUNT(*) AS c FROM users WHERE banned = 0").get().c;
+  const totalInstalls = prepare("SELECT COUNT(*) AS c FROM pwa_installs").get().c;
+  res.json({ views, totalUsers, totalInstalls });
+});
+
+app.get("/vibes-api/admin/users", requireAdmin, (req, res) => {
+  const users = prepare("SELECT username, display_name, photo_data_url, banned FROM users ORDER BY rowid DESC").all();
+  res.json(users.map(u => ({ username: u.username, displayName: u.display_name || u.username, photoDataUrl: u.photo_data_url || null, banned: !!u.banned })));
+});
+
+app.post("/vibes-api/admin/users/:username/ban", requireAdmin, (req, res) => {
+  prepare("UPDATE users SET banned = 1 WHERE username = ?").run(req.params.username);
+  res.json({ ok: true });
+});
+
+app.post("/vibes-api/admin/users/:username/unban", requireAdmin, (req, res) => {
+  prepare("UPDATE users SET banned = 0 WHERE username = ?").run(req.params.username);
+  res.json({ ok: true });
+});
 
 // Presence
 app.post("/vibes-api/presence/update", (req, res) => {
