@@ -458,8 +458,8 @@
 <!-- INSTALL INSTRUCTIONS MODAL -->
 <div id="install-modal" onclick="if(event.target===this)closeInstallModal()">
   <div class="install-modal-card">
-    <div class="install-modal-title" id="install-modal-title">Install Vibes</div>
-    <div class="install-modal-tabs" id="install-modal-tabs"></div>
+    <div class="install-modal-title">Add Vibes to your Home Screen</div>
+    <div id="install-modal-tabs" style="display:none"></div>
     <ol class="install-modal-steps" id="install-modal-steps"></ol>
     <button class="install-modal-close" onclick="closeInstallModal()">Got it</button>
   </div>
@@ -799,78 +799,20 @@ async function handleInstallClick(){
     hideInstallButton();
     return;
   }
+  // Only show instructions for Safari (iOS or macOS) — everything else auto-installs via prompt
   const plat=getPlatform();
-  if(plat.startsWith('ios')) localStorage.setItem('vb_pwa_installed','1');
-  showInstallModal(plat);
+  if(plat.includes('safari')){
+    if(plat.startsWith('ios')) localStorage.setItem('vb_pwa_installed','1');
+    showInstallModal();
+  }
 }
-const INSTALL_STEPS={
-  'ios-safari':[
-    'Tap the <b>Share</b> icon (the square with an arrow pointing up) in Safari\'s toolbar.',
-    'Scroll down the share menu and tap <b>Add to Home Screen</b>.',
-    'Edit the name if you\'d like, then tap <b>Add</b> in the top-right corner.',
-    'Vibes now appears on your Home Screen and opens full-screen, just like a regular app.'
-  ],
-  'ios-other':[
-    'iOS only allows installing apps from <b>Safari</b> — not from this browser.',
-    'Tap the <b>···</b> or share icon and choose <b>Open in Safari</b> (or copy the link and paste it into Safari).',
-    'In Safari, tap the <b>Share</b> icon, scroll down, and tap <b>Add to Home Screen</b>.',
-    'Tap <b>Add</b> in the top-right corner to finish.'
-  ],
-  'android-chrome':[
-    'Tap the <b>⋮</b> menu in the top-right corner of Chrome.',
-    'Tap <b>Install app</b> (older versions show <b>Add to Home screen</b>).',
-    'Confirm by tapping <b>Install</b> in the popup that appears.',
-    'Vibes is added to your Home screen and app drawer, and opens in its own window.'
-  ],
-  'android-other':[
-    'Tap the menu button (<b>⋮</b> or <b>≡</b>) in your browser.',
-    'Look for <b>Add to Home screen</b> or <b>Install</b> in the menu.',
-    'Confirm the prompt — Vibes is added to your Home screen.',
-    'If you don\'t see that option, try opening this page in Chrome instead.'
-  ],
-  'desktop-chrome':[
-    'Look at the right side of the address bar for the install icon (a small monitor with a ↓ arrow).',
-    'Click it, then click <b>Install</b> in the popup that appears.',
-    'If you don\'t see the icon, click the <b>⋮</b> menu → <b>Save and share</b> → <b>Install Vibes…</b>.',
-    'Vibes opens in its own window and is added to your Applications/Start Menu.'
-  ],
-  'desktop-edge':[
-    'Click the <b>···</b> menu in the top-right corner of Edge.',
-    'Hover over <b>Apps</b>, then click <b>Install this site as an app</b>.',
-    'Click <b>Install</b> in the dialog that appears.',
-    'Vibes opens in its own window and is added to your Start Menu.'
-  ],
-  'desktop-safari':[
-    'Safari on Mac doesn\'t support one-click installing — but you can still pin it.',
-    'On macOS Sonoma or later: open the <b>File</b> menu and choose <b>Add to Dock…</b>.',
-    'On older macOS: open the <b>Share</b> menu and choose <b>Add to Reading List</b> or simply bookmark the page (<b>⌘D</b>) for quick access.',
-    'For the full app experience, try opening this page in Chrome or Edge instead.'
-  ],
-  'desktop-firefox':[
-    'Firefox on desktop doesn\'t support installing this as an app.',
-    'Bookmark this page with <b>Ctrl/⌘+D</b> for quick access instead.',
-    'For the full app experience — its own window, no browser bar — open this page in Chrome or Edge and install it from there.'
-  ],
-  other:['Use your browser\'s menu to find <b>Install</b> or <b>Add to Home Screen</b>.']
-};
-const INSTALL_METHOD_LABELS={
-  'ios-safari':'iOS · Safari','ios-other':'iOS · Other',
-  'android-chrome':'Android · Chrome','android-other':'Android · Other',
-  'desktop-chrome':'Desktop · Chrome','desktop-edge':'Desktop · Edge',
-  'desktop-safari':'Desktop · Safari','desktop-firefox':'Desktop · Firefox',
-  other:'Other'
-};
-function renderInstallSteps(plat){
-  document.getElementById('install-modal-steps').innerHTML=INSTALL_STEPS[plat].map(s=>`<li>${s}</li>`).join('');
-  document.getElementById('install-modal-tabs').querySelectorAll('.install-modal-tab').forEach(t=>{
-    t.classList.toggle('on',t.dataset.plat===plat);
-  });
-}
-function showInstallModal(plat){
-  document.getElementById('install-modal-tabs').innerHTML=Object.keys(INSTALL_METHOD_LABELS).map(k=>
-    `<button type="button" class="install-modal-tab" data-plat="${k}" onclick="renderInstallSteps('${k}')">${INSTALL_METHOD_LABELS[k]}</button>`
-  ).join('');
-  renderInstallSteps(plat);
+function showInstallModal(){
+  const isMac=navigator.platform&&navigator.platform.toLowerCase().includes('mac')&&!('ontouchend' in document);
+  document.getElementById('install-modal-tabs').innerHTML='';
+  document.getElementById('install-modal-steps').innerHTML=`
+    <li>Tap the <b>Share</b> button <span style="font-size:1.1em">⬆</span> in Safari's toolbar</li>
+    <li>${isMac?'Select <b>Add to Dock…</b>':'Select <b>Add to Home Screen</b>'}</li>
+    <li>Tap <b>Add</b> to confirm</li>`;
   document.getElementById('install-modal').classList.add('show');
 }
 function closeInstallModal(){document.getElementById('install-modal').classList.remove('show');}
