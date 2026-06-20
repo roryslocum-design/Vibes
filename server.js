@@ -352,13 +352,7 @@ function loadMeState(username) {
 // "best" (full access continues) until the user actually sees the pricing screen on
 // their next app open and either picks a plan or dismisses (which defaults to Free).
 function maybeFlagTrialEnd(username) {
-  const u = prepare("SELECT plan, trial_active, pending_paywall FROM users WHERE username = ?").get(username);
-  if (!u || !u.trial_active || u.plan !== "best" || u.pending_paywall) return;
-  const messageCount = prepare("SELECT COUNT(*) AS c FROM messages WHERE from_user = ?").get(username).c;
-  const contactCount = prepare("SELECT COUNT(*) AS c FROM people WHERE owner = ?").get(username).c;
-  if (messageCount >= 1 || contactCount >= 5) {
-    prepare("UPDATE users SET pending_paywall = 1 WHERE username = ?").run(username);
-  }
+  // Paywall disabled
 }
 
 // Creates mutual "people" rows connecting two users as friends, if not already connected.
@@ -566,6 +560,34 @@ app.get("/vibes-api/me", (req, res) => {
     console.error("Error in /vibes-api/me GET:", e);
     res.status(500).json({ error: e.message || "Server error" });
   }
+});
+
+app.post("/vibes-api/me/credentials", (req, res) => {
+  try {
+    const me = req.me;
+    const { newUsername, newPassword, currentPassword } = req.body;
+    const row = prepare("SELECT password FROM users WHERE username = ?").get(me);
+    if (!row || !verifyPassword(currentPassword, row.password, null)) return res.status(403).json({ error: "Current password is incorrect" });
+    if (newUsername && newUsername !== me) {
+      const taken = prepare("SELECT 1 FROM users WHERE username = ?").get(newUsername);
+      if (taken) return res.status(409).json({ error: "Username already taken" });
+      if (!/^[a-z0-9_]{3,20}$/.test(newUsername)) return res.status(400).json({ error: "Username must be 3-20 characters: letters, numbers, underscores" });
+      prepare("UPDATE people SET owner = ? WHERE owner = ?").run(newUsername, me);
+      prepare("UPDATE people SET source_username = ? WHERE source_username = ?").run(newUsername, me);
+      prepare("UPDATE messages SET from_user = ? WHERE from_user = ?").run(newUsername, me);
+      prepare("UPDATE messages SET to_user = ? WHERE to_user = ?").run(newUsername, me);
+      prepare("UPDATE requests SET from_user = ? WHERE from_user = ?").run(newUsername, me);
+      prepare("UPDATE requests SET to_user = ? WHERE to_user = ?").run(newUsername, me);
+      prepare("UPDATE presence SET username = ? WHERE username = ?").run(newUsername, me);
+      prepare("UPDATE users SET username = ? WHERE username = ?").run(newUsername, me);
+    }
+    const targetUser = newUsername && newUsername !== me ? newUsername : me;
+    if (newPassword) {
+      const hashed = bcrypt.hashSync(newPassword, 10);
+      prepare("UPDATE users SET password = ? WHERE username = ?").run(hashed, targetUser);
+    }
+    res.json({ ok: true, username: targetUser });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.patch("/vibes-api/me", (req, res) => {

@@ -36,7 +36,8 @@
     body{font-family:-apple-system,'SF Pro Display','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);height:100vh;height:100dvh;overflow:hidden;user-select:none;}
 
     /* SPLASH */
-    #splash{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;transition:opacity .4s ease;pointer-events:none;}
+    #splash{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
+    #splash.visible{opacity:1;}
     #splash.gone{opacity:0;}
     .splash-v{font-size:5.5rem;font-weight:800;background:linear-gradient(90deg,#ff2d55,#af52de,#0066ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
     .splash-wordmark{font-size:1.15rem;font-weight:600;letter-spacing:.08em;color:var(--muted);margin-top:.5rem;}
@@ -638,9 +639,16 @@
   <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)"/>
   <div class="field-lbl" id="display-name-lbl">Display Name</div>
   <input class="sheet-input" id="prof-displayname" type="text" placeholder="Display name" data-i18n-ph="displayNamePh" maxlength="30"/>
-  <div style="font-size:.78rem;color:var(--muted);padding:0 .2rem .8rem"><span id="username-label-txt">Username:</span> <span id="prof-username-lbl" style="color:var(--text2)"></span></div>
   <div class="field-lbl" id="icon-color-lbl">Icon Color</div>
   <div id="prof-color-picker" style="display:flex;gap:.55rem;padding:.2rem .2rem 1rem;flex-wrap:wrap"></div>
+  <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.2rem">
+    <div class="field-lbl">Change Username</div>
+    <input class="sheet-input" id="prof-new-username" type="text" placeholder="New username" autocomplete="off" data-lpignore="true" data-1p-ignore maxlength="20"/>
+    <div class="field-lbl" style="margin-top:.6rem">Change Password</div>
+    <input class="sheet-input" id="prof-new-password" type="password" placeholder="New password" autocomplete="new-password" maxlength="100"/>
+    <div class="field-lbl" style="margin-top:.6rem">Current Password <span style="color:var(--muted);font-weight:400">(required to change either)</span></div>
+    <input class="sheet-input" id="prof-current-password" type="password" placeholder="Current password" autocomplete="current-password" maxlength="100"/>
+  </div>
   <button class="sheet-btn btn-primary" id="prof-save-btn" onclick="saveProfile()">Save</button>
   <button class="sheet-btn btn-ghost" id="prof-cancel-btn" onclick="closeSheet('prof')">Cancel</button>
 </div>
@@ -1926,7 +1934,9 @@ function openProfileEdit(){
   else{av.innerHTML=`${(displayName||(me||'?'))[0].toUpperCase()}`;}
   av._pendingPhoto=undefined;
   document.getElementById('prof-displayname').value=displayName;
-  document.getElementById('prof-username-lbl').textContent=me;
+  document.getElementById('prof-new-username').value='';
+  document.getElementById('prof-new-password').value='';
+  document.getElementById('prof-current-password').value='';
   renderColorPicker(color);
   openSheet('prof');
   initSheetSwipe('prof');
@@ -1946,10 +1956,30 @@ async function saveProfile(){
   const displayName=document.getElementById('prof-displayname').value.trim();
   const avatarColor=document.getElementById('prof-color-picker')._selected;
   const pending=document.getElementById('prof-edit-av')._pendingPhoto;
+  const newUsername=document.getElementById('prof-new-username').value.trim().toLowerCase();
+  const newPassword=document.getElementById('prof-new-password').value;
+  const currentPassword=document.getElementById('prof-current-password').value;
+  // Handle credential changes first
+  if(newUsername||newPassword){
+    if(!currentPassword){alert('Enter your current password to change username or password.');return;}
+    try{
+      const res=await apiReq('POST','/me/credentials',{newUsername:newUsername||undefined,newPassword:newPassword||undefined,currentPassword});
+      if(res.username&&res.username!==me){
+        me=res.username;
+        const sess=JSON.parse(localStorage.getItem('vb_sess')||'{}');
+        sess.u=me;if(newPassword)sess.p=newPassword;
+        localStorage.setItem('vb_sess',JSON.stringify(sess));
+        myPw=newPassword||myPw;
+      } else if(newPassword){
+        const sess=JSON.parse(localStorage.getItem('vb_sess')||'{}');
+        sess.p=newPassword;localStorage.setItem('vb_sess',JSON.stringify(sess));
+        myPw=newPassword;
+      }
+    }catch(e){alert(e.message||'Failed to update credentials');return;}
+  }
   const update={displayName,avatarColor};
   if(pending!==undefined)update.photoDataUrl=pending;
-  _state.displayName=displayName;
-  _state.avatarColor=avatarColor;
+  _state.displayName=displayName;_state.avatarColor=avatarColor;
   if(pending!==undefined)_state.photoDataUrl=pending;
   await apiReq('PATCH','/me',update);
   closeSheet('prof');renderAll();
@@ -2722,10 +2752,21 @@ async function toggleReaction(msgId, emoji){
 }
 
 // ── Splash & Connectivity ─────────────────────────────────────────────────────
+let _splashTimer=null;
+function armSplash(){
+  // Only show splash if still loading after 400ms
+  _splashTimer=setTimeout(()=>{
+    const s=document.getElementById('splash');
+    if(s)s.classList.add('visible');
+  },400);
+}
 function dismissSplash(){
+  clearTimeout(_splashTimer);
   const s=document.getElementById('splash');
+  if(!s)return;
+  s.classList.remove('visible');
   s.classList.add('gone');
-  setTimeout(()=>s.remove(),450);
+  setTimeout(()=>s.remove(),350);
 }
 
 function updateConnectivity(){
@@ -2741,10 +2782,10 @@ window.addEventListener('offline', updateConnectivity);
 // ── Boot ──────────────────────────────────────────────────────────────────────
 (()=>{
   updateConnectivity();
+  armSplash();
   const s=localStorage.getItem('vb_sess');
   if(s){try{const {u,p}=JSON.parse(s);me=u;myPw=p;document.getElementById('auth').style.display='none';enterApp();}catch(e){localStorage.removeItem('vb_sess');}}
-  // Dismiss splash after a short moment so logo is visible on cold launch
-  setTimeout(dismissSplash, 600);
+  dismissSplash();
 })();
 </script>
 
