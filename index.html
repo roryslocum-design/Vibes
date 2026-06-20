@@ -441,7 +441,10 @@
   </div>
   <form class="auth-form" onsubmit="return false">
     <input class="auth-input" id="au" type="text" placeholder="Username" autocomplete="username" autocapitalize="none" spellcheck="false"/>
-    <input class="auth-input" id="ap" type="password" placeholder="Password" autocomplete="current-password"/>
+    <div style="position:relative">
+      <input class="auth-input" id="ap" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding-right:2.8rem"/>
+      <button type="button" onclick="togglePwVis('ap',this)" style="position:absolute;right:.85rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:.2rem;display:flex;align-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
     <div class="auth-err" id="aerr"></div>
     <button class="auth-btn" id="asub" onclick="authGo()">Sign In</button>
     <div style="text-align:center;padding:.5rem 0 0">
@@ -662,9 +665,15 @@
     <div class="field-lbl">Change Username</div>
     <input class="sheet-input" id="prof-new-username" type="text" placeholder="New username" autocomplete="off" data-lpignore="true" data-1p-ignore maxlength="20"/>
     <div class="field-lbl" style="margin-top:.6rem">Change Password</div>
-    <input class="sheet-input" id="prof-new-password" type="password" placeholder="New password" autocomplete="new-password" maxlength="100"/>
+    <div style="position:relative">
+      <input class="sheet-input" id="prof-new-password" type="password" placeholder="New password" autocomplete="new-password" maxlength="100" style="padding-right:2.8rem"/>
+      <button type="button" onclick="togglePwVis('prof-new-password',this)" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:.2rem;display:flex;align-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
     <div class="field-lbl" style="margin-top:.6rem">Current Password <span style="color:var(--muted);font-weight:400">(required to change either)</span></div>
-    <input class="sheet-input" id="prof-current-password" type="password" placeholder="Current password" autocomplete="current-password" maxlength="100"/>
+    <div style="position:relative">
+      <input class="sheet-input" id="prof-current-password" type="password" placeholder="Current password" autocomplete="current-password" maxlength="100" style="padding-right:2.8rem"/>
+      <button type="button" onclick="togglePwVis('prof-current-password',this)" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:.2rem;display:flex;align-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
   </div>
   <button class="sheet-btn btn-primary" id="prof-save-btn" onclick="saveProfile()">Save</button>
   <button class="sheet-btn btn-ghost" id="prof-cancel-btn" onclick="closeSheet('prof')">Cancel</button>
@@ -968,6 +977,9 @@ async function loadMe(){
       new Notification('Relationship leveled up '+emoji,{body:n.fromName+' is now '+n.label});
     }
   });
+  // Show admin tab only after server confirms identity
+  const adminTab=document.getElementById('tab-admin');
+  if(adminTab) adminTab.style.display=me==='roryslocum'?'':'none';
   renderAll();updateReqBadge();
 }
 
@@ -1372,7 +1384,6 @@ function enterApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').classList.add('show');
   document.getElementById('people-search-wrap').classList.add('show');
-  if(me==='roryslocum') document.getElementById('tab-admin').style.display='';
   loadMe().then(consumePendingInvite).then(checkPaywall);
   setInterval(loadMe,30000);
   setInterval(pollMessages,8000);
@@ -1971,6 +1982,15 @@ function handlePhotoUpload(e){
   };
   reader.readAsDataURL(file);
 }
+const EYE_OFF=`<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const EYE_ON=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+function togglePwVis(inputId, btn){
+  const el=document.getElementById(inputId);
+  const show=el.type==='password';
+  el.type=show?'text':'password';
+  btn.innerHTML=show?EYE_ON:EYE_OFF;
+}
+
 async function saveProfile(){
   const displayName=document.getElementById('prof-displayname').value.trim();
   const avatarColor=document.getElementById('prof-color-picker')._selected;
@@ -2001,6 +2021,8 @@ async function saveProfile(){
   _state.displayName=displayName;_state.avatarColor=avatarColor;
   if(pending!==undefined)_state.photoDataUrl=pending;
   await apiReq('PATCH','/me',update);
+  const adminTab=document.getElementById('tab-admin');
+  if(adminTab) adminTab.style.display=me==='roryslocum'?'':'none';
   closeSheet('prof');renderAll();
 }
 
