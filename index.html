@@ -926,7 +926,7 @@ async function loadMe(){
   });
   // Show admin tab only after server confirms identity
   const adminTab=document.getElementById('tab-admin');
-  if(adminTab) adminTab.style.display=me==='roryslocum'?'':'none';
+  if(adminTab) adminTab.style.display=_state.isAdmin?'':'none';
   renderAll();updateReqBadge();
 }
 
@@ -1982,7 +1982,7 @@ async function saveProfile(){
   if(pending!==undefined)_state.photoDataUrl=pending;
   await apiReq('PATCH','/me',update);
   const adminTab=document.getElementById('tab-admin');
-  if(adminTab) adminTab.style.display=me==='roryslocum'?'':'none';
+  if(adminTab) adminTab.style.display=_state.isAdmin?'':'none';
   closeSheet('prof');renderAll();
 }
 

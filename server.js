@@ -328,6 +328,7 @@ function loadMeState(username) {
   if (notifs.length) prepare("DELETE FROM notifications WHERE to_user = ?").run(username);
 
   return {
+    isAdmin: u.username === 'roryslocum',
     username: u.username,
     displayName: u.display_name || "",
     photoDataUrl: u.photo_data_url || null,
