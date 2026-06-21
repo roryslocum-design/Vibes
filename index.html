@@ -1970,9 +1970,8 @@ async function saveProfile(){
   }
   const update={displayName,avatarColor};
   if(pending!==undefined)update.photoDataUrl=pending;
-  _state.displayName=displayName;_state.avatarColor=avatarColor;
-  if(pending!==undefined)_state.photoDataUrl=pending;
-  await apiReq('PATCH','/me',update);
+  const patched=await apiReq('PATCH','/me',update);
+  if(patched)_state=Object.assign(_state,patched);
   const adminTab=document.getElementById('tab-admin');
   if(adminTab) adminTab.style.display=_state.isAdmin?'':'none';
   closeSheet('prof');renderAll();
