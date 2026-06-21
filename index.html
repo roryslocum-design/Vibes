@@ -607,17 +607,17 @@
     <input class="sheet-input" id="search-input" type="search" placeholder="Search by username…" data-i18n-ph="searchByUsername" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore oninput="renderSearch()" style="margin-bottom:0;flex:1;min-width:0"/>
     <button id="share-link-btn" onclick="shareInviteLink()" class="sheet-btn btn-ghost" style="flex-shrink:0;margin-bottom:0;font-size:.85rem;width:auto;align-self:stretch;height:auto">🔗 Invite</button>
   </div>
+  <div id="contacts-prompt" style="display:none;background:var(--s2);border-radius:14px;padding:.8rem 1rem;align-items:center;gap:.75rem;margin-bottom:.5rem">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:.85rem;font-weight:600">Find friends from contacts</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:.1rem">See which of your contacts are on Vibes</div>
+    </div>
+    <button class="add-btn" onclick="findFromContacts()" style="flex-shrink:0">Allow</button>
+  </div>
   <div class="search-results card-list" id="search-results" style="margin-bottom:.5rem"></div>
   <div id="suggestions-wrap" style="display:none;margin-bottom:.5rem">
     <div style="font-size:.75rem;font-weight:600;color:var(--muted);padding:.4rem .2rem .3rem">People you might know</div>
     <div class="card-list" id="suggestions-list"></div>
-    <div id="contacts-prompt" style="display:none;margin-top:.5rem;background:var(--s2);border-radius:14px;padding:.8rem 1rem;align-items:center;gap:.75rem">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.85rem;font-weight:600">Find friends from contacts</div>
-        <div style="font-size:.75rem;color:var(--muted);margin-top:.1rem">See which of your contacts are on Vibes</div>
-      </div>
-      <button class="add-btn" onclick="findFromContacts()" style="flex-shrink:0">Allow</button>
-    </div>
   </div>
   <button class="sheet-btn btn-ghost" id="add-cancel-btn" onclick="closeSheet('add')">Cancel</button>
 </div>
@@ -728,7 +728,12 @@ function updateAppBadge(count){
   if(count>0)navigator.setAppBadge(count).catch(()=>{});
   else navigator.clearAppBadge().catch(()=>{});
 }
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)navigator.clearAppBadge&&navigator.clearAppBadge().catch(()=>{});});
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden){
+    navigator.clearAppBadge&&navigator.clearAppBadge().catch(()=>{});
+    checkNotifButtonVisibility();
+  }
+});
 if(isStandalone()) localStorage.setItem('vb_pwa_installed','1');
 function isPwaInstalled(){return !!localStorage.getItem('vb_pwa_installed');}
 function updateInstallButton(){
@@ -1352,14 +1357,15 @@ async function checkNotifButtonVisibility(){
 }
 async function enableNotifications(){
   if(!('Notification' in window)){alert('Notifications are not supported on this browser.');return;}
-  // Support both old callback-style (some iOS) and Promise-style API
-  let perm;
-  try{
-    perm=await new Promise(resolve=>{
-      const r=Notification.requestPermission(resolve);
-      if(r&&r.then) r.then(resolve);
-    });
-  }catch(e){perm=await Notification.requestPermission();}
+  let perm = Notification.permission;
+  if(perm !== 'granted'){
+    try{
+      perm=await new Promise(resolve=>{
+        const r=Notification.requestPermission(resolve);
+        if(r&&r.then) r.then(resolve);
+      });
+    }catch(e){perm=await Notification.requestPermission();}
+  }
   if(perm==='granted'){
     await registerPush();
   } else if(perm==='denied'){
