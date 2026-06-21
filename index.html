@@ -1343,17 +1343,9 @@ function enterApp(){
 
 function notificationsEnabled(){return ('Notification' in window)&&Notification.permission==='granted';}
 async function checkNotifButtonVisibility(){
-  // On iOS, permission stays 'granted' even after user disables in Settings.
-  // The push subscription becomes null in that case — use it as the real signal.
   const btn=document.getElementById('notif-btn-wrap');
   if(!btn)return;
-  if(!notificationsEnabled()){btn.style.display='';return;}
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)){btn.style.display='none';return;}
-  try{
-    const reg=await navigator.serviceWorker.ready;
-    const sub=await reg.pushManager.getSubscription();
-    btn.style.display=sub?'none':'';
-  }catch(e){btn.style.display='';}
+  btn.style.display=notificationsEnabled()?'none':'';
 }
 async function enableNotifications(){
   if(!('Notification' in window)){alert('Notifications are not supported on this browser.');return;}
