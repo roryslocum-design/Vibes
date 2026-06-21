@@ -1351,11 +1351,20 @@ async function checkNotifButtonVisibility(){
   }catch(e){btn.style.display='';}
 }
 async function enableNotifications(){
-  if(!('Notification' in window))return;
-  // Calling requestPermission() triggers the browser/OS's own native
-  // permission dialog directly — same pattern as the location request.
-  const perm=await Notification.requestPermission();
-  if(perm==='granted') await registerPush();
+  if(!('Notification' in window)){alert('Notifications are not supported on this browser.');return;}
+  // Support both old callback-style (some iOS) and Promise-style API
+  let perm;
+  try{
+    perm=await new Promise(resolve=>{
+      const r=Notification.requestPermission(resolve);
+      if(r&&r.then) r.then(resolve);
+    });
+  }catch(e){perm=await Notification.requestPermission();}
+  if(perm==='granted'){
+    await registerPush();
+  } else if(perm==='denied'){
+    alert('Notifications blocked. To enable them, go to Settings → Vibes → Notifications.');
+  }
   if(isSettingsTabActive()) renderSettings();
   checkNotifButtonVisibility();
 }
@@ -1372,7 +1381,10 @@ async function registerPush(){
       applicationServerKey: urlBase64ToUint8Array(publicKey)
     });
     await fetch(API+'/push/subscribe',{method:'POST',headers:apiHeaders(),body:JSON.stringify(sub)});
-  } catch(e){ console.warn('Push setup failed',e); }
+  } catch(e){
+    console.warn('Push setup failed',e);
+    alert('Could not enable push notifications: '+e.message);
+  }
 }
 
 function urlBase64ToUint8Array(base64String){
