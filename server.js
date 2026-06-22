@@ -209,6 +209,9 @@ try { db.exec(`ALTER TABLE users ADD COLUMN ad_gender TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN ad_hobbies TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN ad_lat TEXT`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN ad_lon TEXT`); } catch (e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0`); } catch (e) {}
+// Seed is_admin for the original admin account if it exists and isn't already set
+try { db.exec(`UPDATE users SET is_admin = 1 WHERE username = 'roryslocum' AND is_admin = 0`); } catch (e) {}
   return db;
 }
 // --- Utility Functions ---
@@ -328,7 +331,7 @@ function loadMeState(username) {
   if (notifs.length) prepare("DELETE FROM notifications WHERE to_user = ?").run(username);
 
   return {
-    isAdmin: u.username === 'roryslocum',
+    isAdmin: !!u.is_admin,
     username: u.username,
     displayName: u.display_name || "",
     photoDataUrl: u.photo_data_url || null,
@@ -977,7 +980,8 @@ app.post("/vibes-api/messages/:peer", async (req, res) => {
     const { body } = req.body;
     if (!body) return res.status(400).json({ error: "Body required" });
     const connected = prepare("SELECT 1 FROM people WHERE owner = ? AND source_username = ?").get(me, peer);
-    if (!connected && peer !== 'roryslocum') return res.status(403).json({ error: "Not connected" });
+    const peerIsAdmin = prepare("SELECT is_admin FROM users WHERE username = ?").get(peer);
+    if (!connected && !(peerIsAdmin && peerIsAdmin.is_admin)) return res.status(403).json({ error: "Not connected" });
     prepare("INSERT INTO messages (from_user, to_user, body, ts, read) VALUES (?, ?, ?, ?, 0)").run(me, peer, String(body), now());
     maybeFlagTrialEnd(me);
     // Push notification to recipient
@@ -1094,9 +1098,10 @@ app.post("/vibes-api/track/install", (req, res) => {
   res.json({ ok: true });
 });
 
-// Admin endpoints (roryslocum only)
+// Admin endpoints
 function requireAdmin(req, res, next) {
-  if (req.me !== 'roryslocum') return res.status(403).json({ error: 'Forbidden' });
+  const row = prepare("SELECT is_admin FROM users WHERE username = ?").get(req.me);
+  if (!row || !row.is_admin) return res.status(403).json({ error: 'Forbidden' });
   next();
 }
 
@@ -1129,9 +1134,23 @@ app.post("/vibes-api/admin/users/:username/unban", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+app.delete("/vibes-api/admin/users/:username", requireAdmin, (req, res) => {
+  const u = req.params.username;
+  db.transaction(() => {
+    prepare("DELETE FROM people WHERE owner = ? OR source_username = ?").run(u, u);
+    prepare("DELETE FROM messages WHERE from_user = ? OR to_user = ?").run(u, u);
+    prepare("DELETE FROM requests WHERE from_user = ? OR to_user = ?").run(u, u);
+    prepare("DELETE FROM presence WHERE username = ?").run(u);
+    prepare("DELETE FROM reactions WHERE username = ?").run(u);
+    prepare("DELETE FROM push_subscriptions WHERE username = ?").run(u);
+    prepare("DELETE FROM users WHERE username = ? AND is_admin = 0").run(u);
+  })();
+  res.json({ ok: true });
+});
+
 app.post("/vibes-api/admin/clear-accounts", requireAdmin, (req, res) => {
   db.transaction(() => {
-    const others = prepare("SELECT username FROM users WHERE username != 'roryslocum'").all().map(r => r.username);
+    const others = prepare("SELECT username FROM users WHERE is_admin = 0").all().map(r => r.username);
     for (const u of others) {
       prepare("DELETE FROM people WHERE owner = ? OR source_username = ?").run(u, u);
       prepare("DELETE FROM messages WHERE from_user = ? OR to_user = ?").run(u, u);

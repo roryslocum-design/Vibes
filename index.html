@@ -1331,9 +1331,6 @@ function enterApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').classList.add('show');
   document.getElementById('people-search-wrap').classList.add('show');
-  // Show admin tab immediately from session if we know it's the admin account
-  const adminTab=document.getElementById('tab-admin');
-  if(adminTab&&me==='roryslocum') adminTab.style.display='';
   loadMe().then(consumePendingInvite).then(checkPaywall);
   setInterval(loadMe,30000);
   setInterval(pollMessages,8000);
@@ -2795,7 +2792,8 @@ async function renderAdmin(){
               <div class="admin-user-handle">@${esc(u.username)}</div>
             </div>
             ${u.banned
-              ?`<button class="admin-ban-btn unban" onclick="adminUnban('${esc(u.username)}')">Restore</button>`
+              ?`<button class="admin-ban-btn unban" onclick="adminUnban('${esc(u.username)}')">Restore</button>
+               <button class="admin-ban-btn ban" onclick="adminDeleteUser('${esc(u.username)}')">Clear</button>`
               :`<button class="admin-ban-btn ban" onclick="adminBan('${esc(u.username)}')">Remove</button>`}
           </div>`;
         }).join('')||'<div style="padding:1rem;color:var(--muted);font-size:.85rem;text-align:center">No other accounts</div>'}
@@ -2808,6 +2806,11 @@ async function renderAdmin(){
   }catch(e){el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--muted)">Failed to load</div>`;}
 }
 
+async function adminDeleteUser(username){
+  if(!confirm(`Permanently delete @${username}? This cannot be undone.`))return;
+  await apiReq('DELETE',`/admin/users/${username}`);
+  renderAdmin();
+}
 async function adminClearAccounts(){
   if(!confirm('Delete ALL accounts except yours? This cannot be undone.'))return;
   await apiReq('POST','/admin/clear-accounts');
