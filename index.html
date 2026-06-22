@@ -734,7 +734,7 @@ document.addEventListener('visibilitychange',()=>{
     checkNotifButtonVisibility();
   }
 });
-if(isStandalone()) localStorage.setItem('vb_pwa_installed','1');
+if(isStandalone()){localStorage.setItem('vb_pwa_installed','1');if(!localStorage.getItem('vb_install_tracked')){localStorage.setItem('vb_install_tracked','1');fetch(API+'/track/install',{method:'POST',headers:apiHeaders()}).catch(()=>{});}}
 function isPwaInstalled(){return !!localStorage.getItem('vb_pwa_installed');}
 function updateInstallButton(){
   const btn=document.getElementById('login-install-btn');
@@ -1966,7 +1966,7 @@ async function saveProfile(){
         sess.p=newPassword;localStorage.setItem('vb_sess',JSON.stringify(sess));
         myPw=newPassword;
       }
-    }catch(e){alert(e.message||'Failed to update credentials');return;}
+    }catch(e){alert(e.error||e.message||'Failed to update credentials');return;}
   }
   const update={displayName,avatarColor};
   if(pending!==undefined)update.photoDataUrl=pending;
