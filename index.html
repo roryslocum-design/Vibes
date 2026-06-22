@@ -2755,16 +2755,26 @@ async function renderAdmin(){
     ]);
     const maxViews=Math.max(...stats.views.map(v=>v.count),1);
     const chartH=80;
-    const barW=Math.floor(280/stats.views.length)-2;
+    const yAxisW=28;
+    const barW=Math.floor((280-yAxisW)/stats.views.length)-2;
+    // Y-axis: 3 labels at 0, mid, max
+    const yMid=Math.round(maxViews/2);
+    const yLabels=[
+      {val:maxViews,y:0},
+      {val:yMid,y:Math.round(chartH/2)},
+      {val:0,y:chartH}
+    ];
     const bars=stats.views.map((v,i)=>{
       const h=Math.max(3,Math.round((v.count/maxViews)*chartH));
-      const x=i*(barW+2);
+      const x=yAxisW+i*(barW+2);
       const label=v.date.slice(5); // MM-DD
       return `<g>
         <rect x="${x}" y="${chartH-h}" width="${barW}" height="${h}" rx="3" fill="url(#bg)"/>
         ${i%3===0?`<text x="${x+barW/2}" y="${chartH+12}" text-anchor="middle" font-size="7" fill="var(--muted)">${label}</text>`:''}
       </g>`;
     }).join('');
+    const yAxisSvg=yLabels.map(l=>`<text x="${yAxisW-3}" y="${l.y+3}" text-anchor="end" font-size="7" fill="var(--muted)">${l.val}</text>`).join('');
+    const gridLines=yLabels.map(l=>`<line x1="${yAxisW}" y1="${l.y}" x2="${yAxisW+stats.views.length*(barW+2)}" y2="${l.y}" stroke="var(--muted)" stroke-opacity=".2" stroke-width="0.5"/>`).join('');
     const installPct=stats.totalUsers>0?Math.round((stats.totalInstalls/stats.totalUsers)*100):0;
     el.innerHTML=`
       <div style="padding:1.2rem 1rem .5rem;font-size:1rem;font-weight:700">Overview</div>
@@ -2775,9 +2785,9 @@ async function renderAdmin(){
       </div>
       <div class="admin-chart">
         <div class="admin-chart-title">Page Views — Last 14 Days</div>
-        <svg width="100%" viewBox="0 0 ${stats.views.length*(barW+2)} ${chartH+16}" xmlns="http://www.w3.org/2000/svg">
+        <svg width="100%" viewBox="0 0 ${yAxisW+stats.views.length*(barW+2)} ${chartH+16}" xmlns="http://www.w3.org/2000/svg">
           <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a84ff"/><stop offset="100%" stop-color="#0a84ff" stop-opacity=".4"/></linearGradient></defs>
-          ${bars}
+          ${gridLines}${yAxisSvg}${bars}
         </svg>
       </div>
       <div style="padding:1.2rem 1rem .5rem;font-size:1rem;font-weight:700">Accounts</div>
