@@ -1129,6 +1129,22 @@ app.post("/vibes-api/admin/users/:username/unban", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+app.post("/vibes-api/admin/clear-accounts", requireAdmin, (req, res) => {
+  db.transaction(() => {
+    const others = prepare("SELECT username FROM users WHERE username != 'roryslocum'").all().map(r => r.username);
+    for (const u of others) {
+      prepare("DELETE FROM people WHERE owner = ? OR source_username = ?").run(u, u);
+      prepare("DELETE FROM messages WHERE from_user = ? OR to_user = ?").run(u, u);
+      prepare("DELETE FROM requests WHERE from_user = ? OR to_user = ?").run(u, u);
+      prepare("DELETE FROM presence WHERE username = ?").run(u);
+      prepare("DELETE FROM reactions WHERE username = ?").run(u);
+      prepare("DELETE FROM push_subscriptions WHERE username = ?").run(u);
+      prepare("DELETE FROM users WHERE username = ?").run(u);
+    }
+  })();
+  res.json({ ok: true });
+});
+
 // Presence
 app.post("/vibes-api/presence/update", (req, res) => {
   try {

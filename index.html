@@ -1331,6 +1331,9 @@ function enterApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').classList.add('show');
   document.getElementById('people-search-wrap').classList.add('show');
+  // Show admin tab immediately from session if we know it's the admin account
+  const adminTab=document.getElementById('tab-admin');
+  if(adminTab&&me==='roryslocum') adminTab.style.display='';
   loadMe().then(consumePendingInvite).then(checkPaywall);
   setInterval(loadMe,30000);
   setInterval(pollMessages,8000);
@@ -1830,7 +1833,7 @@ function renderSettings(){
     ${(_installAvailable&&!isStandalone())?`<div class="sec"><div class="card-list" style="padding:.7rem">
       <button class="install-btn" style="position:static;transform:none;width:100%;max-width:none;margin:0" onclick="handleInstallClick()">${isPwaInstalled()&&!_deferredInstallPrompt?'Open App':L('installApp')}</button>
     </div></div>`:''}
-    <div id="notif-btn-wrap" class="sec" style="${notificationsEnabled()?'display:none':''}"><div class="card-list" style="padding:.7rem">
+    <div id="notif-btn-wrap" class="sec"><div class="card-list" style="padding:.7rem">
       <button class="install-btn" style="position:static;transform:none;width:100%;max-width:none;margin:0" onclick="enableNotifications()">${L('turnOnNotifications')}</button>
     </div></div>
     <div class="sec">
@@ -2797,10 +2800,19 @@ async function renderAdmin(){
           </div>`;
         }).join('')||'<div style="padding:1rem;color:var(--muted);font-size:.85rem;text-align:center">No other accounts</div>'}
       </div></div>
+      <div style="padding:1.2rem 1rem .5rem;font-size:1rem;font-weight:700">Danger Zone</div>
+      <div class="sec"><div class="card-list" style="padding:.8rem 1rem">
+        <button class="sign-out" style="width:100%;margin:0;background:#ff3b30;color:#fff;border:none" onclick="adminClearAccounts()">Clear All Accounts</button>
+      </div></div>
       <div style="height:2rem"></div>`;
   }catch(e){el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--muted)">Failed to load</div>`;}
 }
 
+async function adminClearAccounts(){
+  if(!confirm('Delete ALL accounts except yours? This cannot be undone.'))return;
+  await apiReq('POST','/admin/clear-accounts');
+  renderAdmin();
+}
 async function adminBan(username){
   if(!confirm(`Remove @${username}? They won't be able to log in.`))return;
   await apiReq('POST',`/admin/users/${username}/ban`);
