@@ -1295,7 +1295,7 @@ async function authGo(){
   const p=document.getElementById('ap').value;
   const errEl=document.getElementById('aerr');
   if(!u||!p){errEl.textContent=LANG_STRINGS[_lang].fillFields;return;}
-  if(u.length<2){errEl.textContent=LANG_STRINGS[_lang].userShort;return;}
+  if(u.length<3){errEl.textContent=LANG_STRINGS[_lang].userShort;return;}
   const btn=document.getElementById('asub');btn.disabled=true;
   try{
     const res=await fetch(API+(isSignUp?'/auth/signup':'/auth/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
