@@ -2403,7 +2403,7 @@ async function renderChatMessages(){
     const rxnHtml=Object.keys(rxnMap).length
       ?`<div class="reaction-row">${Object.entries(rxnMap).map(([emoji,users])=>{
           const iMine=users.includes(me);
-          const emojiHtml=emoji==='__sideeye__'?`<img src="${SIDEEYE_CLEAN||SIDEEYE_IMG}" style="width:1.1em;height:1.1em;object-fit:contain;vertical-align:middle;border-radius:50%;">`:`${emoji}`;
+          const emojiHtml=emoji==='__sideeye__'?`<img src="${SIDEEYE_CLEAN||SIDEEYE_IMG}" style="width:1.1em;height:1.1em;object-fit:contain;vertical-align:middle;border-radius:50%;">`:emoji==='❓'?`<span style="color:#d44daf;font-weight:900;">?</span>`:`${emoji}`;
           const clickHandler=iMine?`showRemoveReactionMenu(event,${m.id},'${emoji}')`:null;
           return `<button class="reaction-pill${iMine?' mine':''}"${clickHandler?` onclick="${clickHandler}"`:''} style="${iMine?'':'cursor:default'}">${emojiHtml}${users.length>1?`<span class="rc">${users.length}</span>`:''}</button>`;
         }).join('')}</div>`
