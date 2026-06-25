@@ -12,7 +12,7 @@
   <link rel="icon" type="image/svg+xml" href="/vibes/icon.svg">
   <link rel="icon" type="image/png" sizes="192x192" href="/vibes/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/vibes/icon-512.png">
-  <title>Vibes — Develop and Define Your Relationships</title>
+  <title>Vibes</title>
   <meta name="description" content="Vibes is the app to develop and define your relationships — friendships, romance, and everything in between. Track where things stand and find your strongest Vibes.">
   <meta name="keywords" content="relationship app, friendship tracker, vibes, define relationships, social app, romance tracker">
   <link rel="canonical" href="https://vibes-production-c4f3.up.railway.app/">
@@ -315,7 +315,7 @@
     .presence-badge.offline{background:var(--s3);}
     .chat-peer-status{font-size:.68rem;color:var(--muted);margin-top:.15rem;display:flex;align-items:center;gap:.3rem;}
     .reaction-row{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem;padding:0 .2rem;}
-    .reaction-pill{display:inline-flex;align-items:center;gap:.25rem;background:var(--s2);border:1.5px solid transparent;border-radius:20px;padding:.18rem .55rem;font-size:.82rem;cursor:pointer;transition:background .15s,border-color .15s;user-select:none;}
+    .reaction-pill{display:inline-flex;align-items:center;gap:.25rem;background:var(--s2);border:1.5px solid transparent;border-radius:20px;padding:.18rem .55rem;font-size:1.4rem;cursor:pointer;transition:background .15s,border-color .15s;user-select:none;}
     .reaction-pill.mine{border-color:var(--blue);background:rgba(0,122,255,.1);}
     .reaction-pill .rc{font-size:.78rem;color:var(--muted);}
     .emoji-picker{position:fixed;z-index:9999;background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:.45rem .6rem;display:flex;gap:.35rem;box-shadow:0 8px 30px rgba(0,0,0,.3);animation:popIn .12s ease;}
@@ -2403,7 +2403,7 @@ async function renderChatMessages(){
     const rxnHtml=Object.keys(rxnMap).length
       ?`<div class="reaction-row">${Object.entries(rxnMap).map(([emoji,users])=>{
           const iMine=users.includes(me);
-          const emojiHtml=emoji==='__sideeye__'?`<img src="${SIDEEYE_CLEAN||SIDEEYE_IMG}" style="width:1.1em;height:1.1em;object-fit:contain;vertical-align:middle;border-radius:50%;">`:emoji==='❓'?`<span style="color:#d44daf;font-weight:900;">?</span>`:`${emoji}`;
+          const emojiHtml=emoji==='__sideeye__'?`<img src="${SIDEEYE_CLEAN||SIDEEYE_IMG}" style="width:1.4rem;height:1.4rem;object-fit:contain;vertical-align:middle;border-radius:50%;">`:emoji==='❓'?`<span style="color:#d44daf;font-weight:900;">?</span>`:`${emoji}`;
           const clickHandler=iMine?`showRemoveReactionMenu(event,${m.id},'${emoji}')`:null;
           return `<button class="reaction-pill${iMine?' mine':''}"${clickHandler?` onclick="${clickHandler}"`:''} style="${iMine?'':'cursor:default'}">${emojiHtml}${users.length>1?`<span class="rc">${users.length}</span>`:''}</button>`;
         }).join('')}</div>`
@@ -2765,7 +2765,7 @@ function _openEmojiPicker(x, y, msgId){
     if(emoji==='__sideeye__'){
       const img=document.createElement('img');
       img.src=SIDEEYE_CLEAN||SIDEEYE_IMG;
-      img.style.cssText='width:1em;height:1em;object-fit:contain;vertical-align:middle;border-radius:50%;';
+      img.style.cssText='width:1.4rem;height:1.4rem;object-fit:contain;vertical-align:middle;border-radius:50%;';
       btn.appendChild(img);
     } else if(emoji==='❓'){
       btn.textContent='?';
