@@ -2403,12 +2403,14 @@ async function renderChatMessages(){
     const rxnHtml=Object.keys(rxnMap).length
       ?`<div class="reaction-row">${Object.entries(rxnMap).map(([emoji,users])=>{
           const iMine=users.includes(me);
-          const emojiHtml=emoji==='__sideeye__'?`<img src="${SIDEEYE_IMG}" style="width:1.1em;height:1.1em;object-fit:contain;vertical-align:middle;border-radius:50%;">`:`${emoji}`;
-          return `<button class="reaction-pill${iMine?' mine':''}" onclick="toggleReaction(${m.id},'${emoji}')">${emojiHtml}${users.length>1?`<span class="rc">${users.length}</span>`:''}</button>`;
+          const emojiHtml=emoji==='__sideeye__'?`<img src="${SIDEEYE_CLEAN||SIDEEYE_IMG}" style="width:1.1em;height:1.1em;object-fit:contain;vertical-align:middle;border-radius:50%;">`:`${emoji}`;
+          const clickHandler=iMine?`showRemoveReactionMenu(event,${m.id},'${emoji}')`:null;
+          return `<button class="reaction-pill${iMine?' mine':''}"${clickHandler?` onclick="${clickHandler}"`:''} style="${iMine?'':'cursor:default'}">${emojiHtml}${users.length>1?`<span class="rc">${users.length}</span>`:''}</button>`;
         }).join('')}</div>`
       :'';
+    const longPressAttrs=`oncontextmenu="showEmojiPicker(event,${m.id})" onmousedown="startLongPress(event,${m.id},${mine})" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" ontouchstart="startLongPress(event,${m.id},${mine})" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()"`;
     return `<div class="bubble-wrap ${mine?'mine':'theirs'}" data-msg-id="${m.id}">
-      <div class="bubble ${mine?'mine':'theirs'}${isMedia?' img-bubble':''}" oncontextmenu="showEmojiPicker(event,${m.id})" onmousedown="startLongPress(event,${m.id})" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" ontouchstart="startLongPress(event,${m.id})" ontouchend="cancelLongPress()" ontouchmove="cancelLongPress()">${bubbleContent}</div>
+      <div class="bubble ${mine?'mine':'theirs'}${isMedia?' img-bubble':''}" ${longPressAttrs}>${bubbleContent}</div>
       ${rxnHtml}
       <div class="bubble-ts">${formatMsgTs(m.ts)}${receipt}</div>
     </div>`;
@@ -2738,12 +2740,15 @@ function showEmojiPicker(e, msgId){
   _openEmojiPicker(e.clientX, e.clientY, msgId);
 }
 
-function startLongPress(e, msgId){
-  if(e.button!==undefined&&e.button!==0) return; // only left mouse button
+function startLongPress(e, msgId, isMine){
+  if(e.button!==undefined&&e.button!==0) return;
   cancelLongPress();
   const src=e.touches?e.touches[0]:e;
   const x=src.clientX, y=src.clientY;
-  _longPressTimer=setTimeout(()=>{ _openEmojiPicker(x,y,msgId); }, 480);
+  _longPressTimer=setTimeout(()=>{
+    if(isMine){ _openUndoMenu(x,y,msgId); }
+    else { _openEmojiPicker(x,y,msgId); }
+  }, 480);
 }
 
 function cancelLongPress(){
@@ -2760,17 +2765,15 @@ function _openEmojiPicker(x, y, msgId){
     if(emoji==='__sideeye__'){
       const img=document.createElement('img');
       img.src=SIDEEYE_CLEAN||SIDEEYE_IMG;
-      img.style.cssText='width:1.4em;height:1.4em;object-fit:contain;vertical-align:middle;border-radius:50%;';
+      img.style.cssText='width:1em;height:1em;object-fit:contain;vertical-align:middle;border-radius:50%;';
       btn.appendChild(img);
+    } else if(emoji==='❓'){
+      btn.textContent='?';
+      btn.style.cssText='color:#d44daf;font-weight:900;font-size:1.4em;line-height:1;';
     } else {
-      if(emoji==='❓'){
-        btn.textContent='?';
-        btn.style.cssText='color:#d44daf;font-weight:900;font-size:1.4em;line-height:1;';
-      } else {
-        btn.textContent=emoji;
-      }
+      btn.textContent=emoji;
     }
-    btn.onclick=()=>{ toggleReaction(msgId,emoji==='__sideeye__'?'🫤':emoji); _closeEmojiPicker(); };
+    btn.onclick=()=>{ addReaction(msgId,emoji); _closeEmojiPicker(); };
     el.appendChild(btn);
   });
   document.body.appendChild(el);
@@ -2788,12 +2791,74 @@ function _closeEmojiPicker(){
   if(_pickerEl){ _pickerEl.remove(); _pickerEl=null; }
 }
 
-async function toggleReaction(msgId, emoji){
+async function addReaction(msgId, emoji){
   if(!_chatPeer) return;
   try{
     await apiReq('POST','/messages/'+_chatPeer.username+'/react',{msgId,emoji});
     await renderChatMessages();
   }catch(e){}
+}
+
+async function removeReaction(msgId, emoji){
+  if(!_chatPeer) return;
+  try{
+    await apiReq('DELETE','/messages/'+_chatPeer.username+'/react',{msgId,emoji});
+    await renderChatMessages();
+  }catch(e){}
+}
+
+async function unsendMessage(msgId){
+  if(!_chatPeer) return;
+  try{
+    await apiReq('DELETE','/messages/'+_chatPeer.username+'/'+msgId);
+    await renderChatMessages();
+  }catch(e){}
+}
+
+let _menuEl=null;
+function _closeMenu(){ if(_menuEl){_menuEl.remove();_menuEl=null;} }
+
+function _openUndoMenu(x, y, msgId){
+  _closeMenu();
+  const el=document.createElement('div');
+  el.className='emoji-picker';
+  el.style.cssText='display:flex;flex-direction:column;gap:4px;padding:8px 12px;';
+  const btn=document.createElement('button');
+  btn.textContent='Undo Send';
+  btn.style.cssText='font-size:.95rem;color:#ff453a;background:none;border:none;cursor:pointer;padding:4px 0;white-space:nowrap;';
+  btn.onclick=()=>{ _closeMenu(); unsendMessage(msgId); };
+  el.appendChild(btn);
+  document.body.appendChild(el);
+  _menuEl=el;
+  const W=window.innerWidth, H=window.innerHeight;
+  const pw=el.offsetWidth||120, ph=el.offsetHeight||44;
+  let left=x-pw/2, top=y-ph-12;
+  left=Math.max(8,Math.min(left,W-pw-8));
+  top=top<8?y+16:top;
+  el.style.left=left+'px'; el.style.top=top+'px';
+  setTimeout(()=>document.addEventListener('click',_closeMenu,{once:true}),0);
+}
+
+function showRemoveReactionMenu(e, msgId, emoji){
+  e.stopPropagation();
+  _closeMenu();
+  const el=document.createElement('div');
+  el.className='emoji-picker';
+  el.style.cssText='display:flex;flex-direction:column;gap:4px;padding:8px 12px;';
+  const btn=document.createElement('button');
+  btn.textContent='Remove Tapback';
+  btn.style.cssText='font-size:.95rem;color:#ff453a;background:none;border:none;cursor:pointer;padding:4px 0;white-space:nowrap;';
+  btn.onclick=()=>{ _closeMenu(); removeReaction(msgId,emoji); };
+  el.appendChild(btn);
+  document.body.appendChild(el);
+  _menuEl=el;
+  const W=window.innerWidth, H=window.innerHeight;
+  const r=e.target.getBoundingClientRect();
+  let left=r.left, top=r.top-el.offsetHeight-8;
+  left=Math.max(8,Math.min(left,W-140));
+  top=top<8?r.bottom+8:top;
+  el.style.left=left+'px'; el.style.top=top+'px';
+  setTimeout(()=>document.addEventListener('click',_closeMenu,{once:true}),0);
 }
 
 // ── Admin ─────────────────────────────────────────────────────────────────────

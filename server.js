@@ -196,6 +196,8 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 try { db.exec(`ALTER TABLE people ADD COLUMN chat_expiry INTEGER DEFAULT NULL`); } catch (e) {}
 try { db.exec(`ALTER TABLE presence ADD COLUMN chat_with TEXT DEFAULT NULL`); } catch (e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS reactions (msg_id INTEGER NOT NULL, username TEXT NOT NULL, emoji TEXT NOT NULL, PRIMARY KEY (msg_id, username))`); } catch (e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS reactions2 (id INTEGER PRIMARY KEY AUTOINCREMENT, msg_id INTEGER NOT NULL, username TEXT NOT NULL, emoji TEXT NOT NULL, UNIQUE(msg_id, username, emoji))`); } catch (e) {}
+try { db.exec(`INSERT OR IGNORE INTO reactions2 (msg_id, username, emoji) SELECT msg_id, username, emoji FROM reactions`); } catch (e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS page_views (date TEXT PRIMARY KEY, count INTEGER DEFAULT 0)`); } catch (e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS pwa_installs (ts INTEGER NOT NULL)`); } catch (e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0`); } catch (e) {}
@@ -904,7 +906,7 @@ app.get("/vibes-api/messages/:peer", (req, res) => {
     prepare("UPDATE messages SET read = 1 WHERE from_user = ? AND to_user = ?").run(peer, me);
     const msgIds = msgs.map(m => m.id);
     const reactions = msgIds.length
-      ? prepare(`SELECT msg_id, username, emoji FROM reactions WHERE msg_id IN (${msgIds.map(()=>'?').join(',')}) ORDER BY rowid ASC`).all(...msgIds)
+      ? prepare(`SELECT msg_id, username, emoji FROM reactions2 WHERE msg_id IN (${msgIds.map(()=>'?').join(',')}) ORDER BY id ASC`).all(...msgIds)
       : [];
     const reactionsByMsg = {};
     for (const r of reactions) {
@@ -931,12 +933,31 @@ app.post("/vibes-api/messages/:peer/react", (req, res) => {
     if (!msgId || !emoji) return res.status(400).json({ error: "Missing msgId or emoji" });
     const msg = prepare("SELECT id FROM messages WHERE id = ? AND (from_user IN (?,?) AND to_user IN (?,?))").get(msgId, me, peer, me, peer);
     if (!msg) return res.status(403).json({ error: "Message not found" });
-    const existing = prepare("SELECT emoji FROM reactions WHERE msg_id = ? AND username = ?").get(msgId, me);
-    if (existing && existing.emoji === emoji) {
-      prepare("DELETE FROM reactions WHERE msg_id = ? AND username = ?").run(msgId, me);
-    } else {
-      prepare("INSERT INTO reactions (msg_id, username, emoji) VALUES (?,?,?) ON CONFLICT(msg_id,username) DO UPDATE SET emoji=excluded.emoji").run(msgId, me, emoji);
-    }
+    prepare("INSERT OR IGNORE INTO reactions2 (msg_id, username, emoji) VALUES (?,?,?)").run(msgId, me, emoji);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/vibes-api/messages/:peer/react", (req, res) => {
+  try {
+    const me = req.me;
+    const peer = decodeURIComponent(req.params.peer);
+    const { msgId, emoji } = req.body;
+    if (!msgId || !emoji) return res.status(400).json({ error: "Missing msgId or emoji" });
+    prepare("DELETE FROM reactions2 WHERE msg_id = ? AND username = ? AND emoji = ?").run(msgId, me, emoji);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/vibes-api/messages/:peer/:msgId", (req, res) => {
+  try {
+    const me = req.me;
+    const peer = decodeURIComponent(req.params.peer);
+    const msgId = parseInt(req.params.msgId);
+    const msg = prepare("SELECT id FROM messages WHERE id = ? AND from_user = ?").get(msgId, me);
+    if (!msg) return res.status(403).json({ error: "Not your message" });
+    prepare("DELETE FROM reactions2 WHERE msg_id = ?").run(msgId);
+    prepare("DELETE FROM messages WHERE id = ?").run(msgId);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1143,7 +1164,7 @@ app.delete("/vibes-api/admin/users/:username", requireAdmin, (req, res) => {
     prepare("DELETE FROM messages WHERE from_user = ? OR to_user = ?").run(u, u);
     prepare("DELETE FROM requests WHERE from_user = ? OR to_user = ?").run(u, u);
     prepare("DELETE FROM presence WHERE username = ?").run(u);
-    prepare("DELETE FROM reactions WHERE username = ?").run(u);
+    prepare("DELETE FROM reactions2 WHERE username = ?").run(u);
     prepare("DELETE FROM push_subscriptions WHERE username = ?").run(u);
     prepare("DELETE FROM users WHERE username = ? AND is_admin = 0").run(u);
   })();
@@ -1158,7 +1179,7 @@ app.post("/vibes-api/admin/clear-accounts", requireAdmin, (req, res) => {
       prepare("DELETE FROM messages WHERE from_user = ? OR to_user = ?").run(u, u);
       prepare("DELETE FROM requests WHERE from_user = ? OR to_user = ?").run(u, u);
       prepare("DELETE FROM presence WHERE username = ?").run(u);
-      prepare("DELETE FROM reactions WHERE username = ?").run(u);
+      prepare("DELETE FROM reactions2 WHERE username = ?").run(u);
       prepare("DELETE FROM push_subscriptions WHERE username = ?").run(u);
       prepare("DELETE FROM users WHERE username = ?").run(u);
     }
