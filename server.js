@@ -456,6 +456,8 @@ const ICON_PNG_512 = fs.readFileSync(path.join(__dirname, 'icon-512.png'));
 const ICON_PNG_512M = fs.readFileSync(path.join(__dirname, 'icon-512-maskable.png'));
 const ICON_PNG_180 = fs.readFileSync(path.join(__dirname, 'apple-touch-icon.png'));
 
+app.get('/google14d8cddfc9a76948.html', (req, res) => res.type('text/html').send('google-site-verification: google14d8cddfc9a76948.html'));
+
 app.get('/vibes/manifest.json', (req, res) => {
   res.json({
     name: "Vibes", short_name: "Vibes", start_url: "/vibes/", scope: "/vibes/", display: "standalone",
