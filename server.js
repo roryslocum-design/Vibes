@@ -1128,6 +1128,11 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+app.get("/vibes-api/admin/push-debug", requireAdmin, (req, res) => {
+  const subs = prepare("SELECT username, endpoint FROM push_subscriptions").all();
+  res.json({ vapidPublicKey: process.env.VAPID_PUBLIC_KEY?.slice(0,20)+'...', subscriptions: subs });
+});
+
 app.get("/vibes-api/admin/stats", requireAdmin, (req, res) => {
   const days = 14;
   const views = [];
