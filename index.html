@@ -762,8 +762,6 @@ function updateInstallButton(){
   if(isStandalone()){btn.style.display='none';return;}
   const plat=getPlatform();
   const isIOS=plat.startsWith('ios');
-  const plat=getPlatform();
-  const isIOS=plat.startsWith('ios');
   if(isPwaInstalled()){
     btn.style.display='block';
     btn.textContent='Open App';
@@ -771,14 +769,12 @@ function updateInstallButton(){
     return;
   }
   if(isIOS){
-    // On iOS we can't detect if PWA is installed from Safari (separate localStorage)
-    // Show "Open App" if they might have it, otherwise show install
     btn.style.display='block';
-    btn.textContent='Open App';
+    const iosInstallSeen=!!localStorage.getItem('vb_ios_install_seen');
+    btn.textContent=iosInstallSeen?'Open App':'Install as App';
     btn.onclick=()=>{
-      // Try to open — if not installed, show install instructions after a moment
-      window.location.href=location.origin+location.pathname;
-      setTimeout(()=>handleInstallClick(),1500);
+      localStorage.setItem('vb_ios_install_seen','1');
+      handleInstallClick();
     };
     return;
   }
