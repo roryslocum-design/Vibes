@@ -762,15 +762,25 @@ function updateInstallButton(){
   if(isStandalone()){btn.style.display='none';return;}
   const plat=getPlatform();
   const isIOS=plat.startsWith('ios');
+  const plat=getPlatform();
+  const isIOS=plat.startsWith('ios');
   if(isPwaInstalled()){
-    const isChrome=/Chrome\//.test(navigator.userAgent)&&!/Edg\//.test(navigator.userAgent);
-    if(isChrome){
-      btn.style.display='block';
-      btn.textContent='Open App';
-      btn.onclick=()=>{window.location.href=location.origin+'/';};
-      return;
-    }
-    btn.style.display='none';return;
+    btn.style.display='block';
+    btn.textContent='Open App';
+    btn.onclick=()=>{window.location.href=location.origin+location.pathname;};
+    return;
+  }
+  if(isIOS){
+    // On iOS we can't detect if PWA is installed from Safari (separate localStorage)
+    // Show "Open App" if they might have it, otherwise show install
+    btn.style.display='block';
+    btn.textContent='Open App';
+    btn.onclick=()=>{
+      // Try to open — if not installed, show install instructions after a moment
+      window.location.href=location.origin+location.pathname;
+      setTimeout(()=>handleInstallClick(),1500);
+    };
+    return;
   }
   if(_deferredInstallPrompt||!isStandalone()){
     btn.style.display='block';
@@ -999,7 +1009,7 @@ function initObSwipe(){
   document.addEventListener('touchend',end,{passive:true});
   document.addEventListener('mouseup',end);
 }
-function obClose(e){if(e&&e.target!==document.getElementById('ob-overlay'))return;document.getElementById('ob-overlay').classList.remove('show');localStorage.setItem('vb_seen_ob','1');if(me){localStorage.setItem('vb_seen_ob_'+me,'1');}}
+function obClose(e){if(e&&e.target!==document.getElementById('ob-overlay'))return;document.getElementById('ob-overlay').classList.remove('show');localStorage.setItem('vb_seen_ob','1');if(me){localStorage.setItem('vb_seen_ob_'+me,'1');}if(window._obOnClose){const cb=window._obOnClose;window._obOnClose=null;cb();}}
 
 const LANG_STRINGS={
   en:{
@@ -1324,9 +1334,18 @@ async function authGo(){
     localStorage.setItem('vb_sess',JSON.stringify({u,p}));
     errEl.textContent='';
     enterApp();
-    if(isSignUp) setTimeout(()=>{goTab('settings',document.getElementById('tab-settings'));openProfileEdit();},100);
     if(isSignUp && !localStorage.getItem('vb_seen_ob_'+u) && !localStorage.getItem('vb_seen_ob')){
-      setTimeout(()=>obOpen(),300);
+      setTimeout(()=>obOpen(),100);
+      // After onboarding, open profile edit and prompt contacts
+      const origObClose=window._obOnClose;
+      window._obOnClose=()=>{
+        window._obOnClose=origObClose;
+        goTab('settings',document.getElementById('tab-settings'));
+        openProfileEdit();
+        setTimeout(()=>promptContactsIfAvailable(),400);
+      };
+    } else {
+      if(isSignUp) setTimeout(()=>{goTab('settings',document.getElementById('tab-settings'));openProfileEdit();},100);
     }
   }catch(e){errEl.textContent=(typeof e==='object'?e?.error:e)||'Something went wrong';}
   btn.disabled=false;
@@ -1494,7 +1513,7 @@ async function loadSuggestions(){
     const results=await apiReq('GET','/users/suggestions');
     const hasContacts='contacts' in navigator;
     const contactsSynced=!!localStorage.getItem('vb_contacts_synced');
-    if(prompt) prompt.style.display=(hasContacts&&!contactsSynced)?'flex':'none';
+    if(prompt) prompt.style.display=hasContacts?'flex':'none';
     if(!results||!results.length){list.innerHTML='';return;}
     list.innerHTML=results.map(u=>{
       const mutual=u.mutualCount===1?'1 mutual':u.mutualCount+' mutuals';
@@ -1529,6 +1548,11 @@ async function consumePendingInvite(){
     await apiReq('POST','/invite/accept',{fromUsername:invite});
     await loadMe();
   }catch(e){console.error('invite accept failed',e);}
+}
+
+function promptContactsIfAvailable(){
+  if(!('contacts' in navigator)) return;
+  openAdd();
 }
 
 async function findFromContacts(){
