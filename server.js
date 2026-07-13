@@ -1094,10 +1094,13 @@ app.post("/vibes-api/push/subscribe", (req, res) => {
   try {
     const me = req.me;
     const sub = req.body;
+    console.log(`[push] subscribe attempt for ${me}, endpoint: ${sub && sub.endpoint ? sub.endpoint.slice(0,60) : 'MISSING'}`);
     if (!sub || !sub.endpoint) return res.status(400).json({ error: "Invalid subscription" });
     prepare("INSERT OR REPLACE INTO push_subscriptions (username, endpoint, subscription) VALUES (?, ?, ?)").run(me, sub.endpoint, JSON.stringify(sub));
+    console.log(`[push] subscription saved for ${me}`);
     res.json({ ok: true });
   } catch (e) {
+    console.error(`[push] subscribe error for ${me}:`, e.message);
     res.status(500).json({ error: e.message });
   }
 });
