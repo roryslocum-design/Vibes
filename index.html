@@ -1396,7 +1396,7 @@ async function enableNotifications(){
   if(perm==='granted'){
     await registerPush();
   } else if(perm==='denied'){
-    alert('Notifications blocked. To enable them, go to Settings → Vibes → Notifications.');
+    alert('Notifications blocked. To enable them, go to Settings → Notifications → Vibes.');
   }
   if(isSettingsTabActive()) renderSettings();
   checkNotifButtonVisibility();
