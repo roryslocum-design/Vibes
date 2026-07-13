@@ -1075,15 +1075,17 @@ app.post("/vibes-api/rizz", async (req, res) => {
 // PUSH NOTIFICATIONS
 function sendPushToUser(username, payload) {
   const subs = prepare("SELECT subscription FROM push_subscriptions WHERE username = ?").all(username);
+  if (!subs.length) { console.log(`[push] no subscriptions for ${username}`); return; }
   for (const row of subs) {
     try {
       const sub = JSON.parse(row.subscription);
       webpush.sendNotification(sub, JSON.stringify(payload)).catch(err => {
+        console.error(`[push] failed for ${username}: ${err.statusCode} ${err.message}`);
         if (err.statusCode === 410 || err.statusCode === 404) {
           prepare("DELETE FROM push_subscriptions WHERE username = ? AND endpoint = ?").run(username, sub.endpoint);
         }
       });
-    } catch (e) {}
+    } catch (e) { console.error(`[push] error for ${username}:`, e.message); }
   }
 }
 
