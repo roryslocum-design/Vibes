@@ -1366,7 +1366,11 @@ function enterApp(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').classList.add('show');
   document.getElementById('people-search-wrap').classList.add('show');
-  loadMe().then(consumePendingInvite).then(checkPaywall);
+  loadMe().then(consumePendingInvite).then(checkPaywall).then(()=>{
+    if('contacts' in navigator && !localStorage.getItem('vb_contacts_synced')){
+      setTimeout(()=>openAdd(), 800);
+    }
+  });
   setInterval(loadMe,30000);
   setInterval(pollMessages,8000);
   // Update presence when app loads and periodically
@@ -1450,7 +1454,14 @@ function goTab(t,btn){
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function ini(n){return (n||'?').split(' ').filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';}
-function hasThreeConsecutive(contactName,username){const n=contactName.toLowerCase(),u=username.toLowerCase();for(let i=0;i<=n.length-3;i++){if(u.includes(n.slice(i,i+3)))return true;}return false;}
+function namesMatch(contactName,displayName){
+  if(!contactName||!displayName)return false;
+  const a=contactName.trim().toLowerCase(), b=displayName.trim().toLowerCase();
+  if(a===b)return true;
+  // Both names share all words (handles "John Smith" vs "Smith John" etc)
+  const wa=a.split(/\s+/), wb=b.split(/\s+/);
+  return wa.length>0&&wa.every(w=>wb.includes(w))&&wb.every(w=>wa.includes(w));
+}
 function scaleLabel(type,idx){return idx!=null?SCALES[type].steps[idx]:null;}
 function scaleColor(type,idx){return idx!=null?SCALES[type].clrs[idx]:'#6b6b80';}
 function getProfile(){return{displayName:_state.displayName||'',photoDataUrl:_state.photoDataUrl||null,avatarColor:_state.avatarColor||null};}
@@ -1570,11 +1581,14 @@ async function findFromContacts(){
     const newRows=[];
     for(const c of contacts){
       const name=(c.name||[])[0];if(!name)continue;
-      const words=name.trim().split(/\s+/).filter(w=>w.length>=3);
+      const words=name.trim().split(/\s+/).filter(w=>w.length>=2);
+      const searched=new Set();
       for(const word of words){
-        const results=await apiReq('GET',`/users/search?q=${encodeURIComponent(word)}`);
+        if(searched.has(word.toLowerCase()))continue;
+        searched.add(word.toLowerCase());
+        const results=await apiReq('GET',`/users/search?q=${encodeURIComponent(word)}&byDisplayName=1`);
         for(const u of results){
-          if(!seen.has(u.username)&&hasThreeConsecutive(name,u.username)&&!u.connected){
+          if(!seen.has(u.username)&&namesMatch(name,u.displayName)&&!u.connected){
             seen.add(u.username);
             newRows.push(renderSuggestionRow(u,'in your contacts'));
           }
