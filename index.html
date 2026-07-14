@@ -611,7 +611,7 @@
     </button>
     <input type="file" id="chat-img-input" accept="image/*,video/*" style="display:none" onchange="sendChatMedia(this)"/>
     <button class="rizz-btn" id="rizz-btn" style="display:none" onclick="getRizzSuggestion()" title="Rizz suggestion">✨</button>
-    <textarea class="chat-input" id="chat-input" placeholder="Message…" data-i18n-ph="messagePlaceholder" rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
+    <textarea class="chat-input" id="chat-input" placeholder="Message…" data-i18n-ph="messagePlaceholder" rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';trackTyping()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
     <button class="chat-send" id="chat-send-btn" onclick="sendChatMessage()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
