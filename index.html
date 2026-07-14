@@ -1715,7 +1715,7 @@ function renderDetail(p){
   const ownShowRom=p.showRomantic!==false;
   const theyRemoved=p.theyRemovedRomantic===true;
   const showRom=ownShowRom&&!theyRemoved;
-  const mutualNote=showRom&&p.sourceUsername?`<span style="font-size:.68rem;color:var(--muted);font-weight:400"> · mutual</span>`:'';
+  const mutualNote='';
   const romanticToggle=theyRemoved
     ?`<div style="display:flex;align-items:center;justify-content:space-between;padding:.2rem .1rem .6rem">
         <span style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">💕 Romantic</span>
