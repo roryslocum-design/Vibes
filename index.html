@@ -1387,6 +1387,7 @@ async function checkNotifButtonVisibility(){
   btn.style.display=notificationsEnabled()?'none':'';
 }
 async function enableNotifications(){
+  alert('enableNotifications called, Notification in window: '+('Notification' in window)+', perm: '+(('Notification' in window)?Notification.permission:'N/A'));
   if(!('Notification' in window)){alert('Notifications are not supported on this browser.');return;}
   let perm = Notification.permission;
   if(perm !== 'granted'){
