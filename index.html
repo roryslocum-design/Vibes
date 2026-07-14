@@ -1387,7 +1387,6 @@ async function checkNotifButtonVisibility(){
   btn.style.display=notificationsEnabled()?'none':'';
 }
 async function enableNotifications(){
-  alert('enableNotifications called, Notification in window: '+('Notification' in window)+', perm: '+(('Notification' in window)?Notification.permission:'N/A'));
   if(!('Notification' in window)){alert('Notifications are not supported on this browser.');return;}
   let perm = Notification.permission;
   if(perm !== 'granted'){
@@ -1399,34 +1398,34 @@ async function enableNotifications(){
     }catch(e){perm=await Notification.requestPermission();}
   }
   if(perm==='granted'){
-    await registerPush(true);
+    await registerPush();
   } else if(perm==='denied'){
     alert('Notifications blocked. To enable them, go to Settings → Notifications → Vibes.');
   }
   if(isSettingsTabActive()) renderSettings();
   checkNotifButtonVisibility();
 }
-async function registerPush(debug){
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)){if(debug)alert('Push not supported: no SW or PushManager');return;}
-  if(!notificationsEnabled()){if(debug)alert('notificationsEnabled() false, perm='+Notification.permission);return;}
+async function registerPush(){
+  const hasSW='serviceWorker' in navigator;
+  const hasPM='PushManager' in window;
+  if(!hasSW||!hasPM){
+    alert('Push not supported: SW='+hasSW+' PM='+hasPM);
+    return;
+  }
+  if(!notificationsEnabled()) return;
   try {
-    if(debug)alert('Step 1: waiting for SW ready');
     const reg = await navigator.serviceWorker.ready;
-    if(debug)alert('Step 2: fetching VAPID key');
     const keyRes = await fetch(API+'/push/vapid-public-key');
     const { key: publicKey } = await keyRes.json();
-    if (!publicKey){if(debug)alert('No VAPID key returned');return;}
-    if(debug)alert('Step 3: subscribing, key='+publicKey.slice(0,20));
+    if (!publicKey) return;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey)
     });
-    if(debug)alert('Step 4: saving subscription to server');
     await fetch(API+'/push/subscribe',{method:'POST',headers:apiHeaders(),body:JSON.stringify(sub)});
-    if(debug)alert('Done! Subscription saved.');
   } catch(e){
     console.warn('Push setup failed',e);
-    alert('Could not enable push notifications: '+e.message);
+    alert('Push failed: '+e.message);
   }
 }
 
